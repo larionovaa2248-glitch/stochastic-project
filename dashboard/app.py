@@ -422,8 +422,8 @@ with tab_about:
    In **variant B** the price only closes a fraction **κ** of its gap to the
    truth each period, so mispricings *persist* — the smaller κ, the longer a
    cheap contract stays cheap. κ = 1 is exactly variant A.
-3. **Settlement.** At the horizon T the contract pays $1 with probability
-   `q_T` (drawn by inverse transform, Lecture 2), else $0. Profit per unit =
+3. **Settlement.** At the horizon T the contract pays \$1 with probability
+   `q_T` (drawn by inverse transform, Lecture 2), else \$0. Profit per unit =
    payout − entry price − transaction cost.
 
 **The trading idea.** The EMA policy smooths the price into a fair-value
@@ -444,7 +444,7 @@ are buy-and-hold (buy at t=0, ignore the path) and never-trade (profit 0).
 **Headline finding** *(seed 20260812, n = 20,000/point — see results/)*:
 with realistic observation noise (σ_p ≈ 0.05), the best EMA policy beats
 buy-and-hold **at every persistence level κ ∈ [0.05, 1]**, even with a 2-cent
-per-trade cost; the edge peaks near κ ≈ 0.2–0.3 (~+$0.10 per $1 contract) and
+per-trade cost; the edge peaks near κ ≈ 0.2–0.3 (≈ +\$0.10 per \$1 contract) and
 vanishes only when observation noise vanishes. Persistence shapes the edge —
 noise creates it.
 
@@ -454,7 +454,7 @@ backtest policies on real series — that is out of scope by design.
 
 **Reproducibility.** Every simulation takes an explicit seed
 (`numpy.random.Generator`); the same seed always reproduces the same paths,
-trades, and CIs. The engine passes an 31-test validation suite (zero-noise
+trades, and CIs. The engine passes a 31-test validation suite (zero-noise
 limit, martingale property, settlement calibration, no-lookahead, seed
 reproducibility — Section 7).
 

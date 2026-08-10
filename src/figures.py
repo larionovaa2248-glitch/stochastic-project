@@ -191,11 +191,16 @@ def fig_grid_heatmaps(comparison: pd.DataFrame, suffix: str) -> tuple[go.Figure,
                    colorscale=DIVERGING, zmin=-lim, zmax=lim,
                    colorbar=dict(title="E[profit]"),
                    texttemplate="%{z:.3f}", textfont=dict(color=INK), xgap=2, ygap=2)
-    star_note = "⭐ winner (CI-beats BH)" if win_sig else "⭐ winner (not CI-significant vs BH)"
-    f1.add_scatter(x=[str(winner["delta"])], y=[str(winner["alpha"])],
-                   mode="markers", name=star_note, showlegend=True,
-                   marker=dict(symbol="star", size=16, color=INK,
-                               line=dict(color=SURFACE, width=1)))
+    # Outline the winning cell (shapes take category-INDEX coordinates, so
+    # the border hugs the cell without covering its printed value).
+    j, i = deltas.index(winner["delta"]), alphas.index(winner["alpha"])
+    f1.add_shape(type="rect", x0=j - 0.5, x1=j + 0.5, y0=i - 0.5, y1=i + 0.5,
+                 line=dict(color=INK, width=3))
+    star_note = ("outlined cell = winner; its lead over buy-and-hold is "
+                 "CI-significant" if win_sig else
+                 "outlined cell = winner; lead over buy-and-hold NOT CI-significant")
+    f1.add_annotation(xref="paper", yref="paper", x=0, y=1.06, showarrow=False,
+                      text=star_note, font=dict(size=12, color=INK_2))
     f1.update_xaxes(type="category")
     f1.update_yaxes(type="category")
 
