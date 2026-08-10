@@ -32,6 +32,17 @@ Reproduce all experiment sweeps (writes CSVs to `results/` and figures to `repor
 python -m src.experiments
 ```
 
+## Headline result
+
+With realistic observation noise (σ_p ≈ 0.05), the best EMA-threshold policy
+beats buy-and-hold with CI-significance at **every** mispricing-persistence
+level κ ∈ [0.05, 1] — even with a 2¢ per-trade cost. The edge peaks at
+moderate persistence (κ ≈ 0.2–0.3, ≈ +\$0.10 per \$1 contract) and vanishes
+only when observation noise vanishes: **noise creates the edge; persistence
+shapes it.** All numbers with 95% CIs in [results/summary.md](results/summary.md)
+(master seed 20260812); analysis walkthrough in
+[notebooks/analysis.ipynb](notebooks/analysis.ipynb).
+
 ## Layout
 
 See [PROJECT.md](PROJECT.md) for the full specification, model definition, and build plan.
