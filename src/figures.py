@@ -45,8 +45,8 @@ def _base_layout(title: str, xaxis_title: str, yaxis_title: str) -> go.Layout:
         font=FONT,
         xaxis=dict(title=xaxis_title, gridcolor=GRID, zerolinecolor=GRID, tickcolor=MUTED),
         yaxis=dict(title=yaxis_title, gridcolor=GRID, zerolinecolor="#c3c2b7", tickcolor=MUTED),
-        legend=dict(orientation="h", yanchor="top", y=-0.18, x=0),
-        margin=dict(l=70, r=30, t=60, b=110),
+        legend=dict(orientation="h", yanchor="top", y=-0.22, x=0),
+        margin=dict(l=70, r=30, t=60, b=120),
     )
 
 
@@ -184,18 +184,20 @@ def fig_grid_heatmaps(comparison: pd.DataFrame, suffix: str) -> tuple[go.Figure,
     win_sig = bool(winner["beats_bh"])
 
     f1 = go.Figure(layout=_base_layout(
-        f"Expected profit over the policy grid ({suffix})"
-        + (" — winner beats buy-and-hold (95% CI)" if win_sig else ""),
+        f"Expected profit over the policy grid ({suffix})",
         "delta (entry threshold)", "alpha (EMA smoothing)",
     ))
     f1.add_heatmap(z=M, x=[str(d) for d in deltas], y=[str(a) for a in alphas],
                    colorscale=DIVERGING, zmin=-lim, zmax=lim,
                    colorbar=dict(title="E[profit]"),
                    texttemplate="%{z:.3f}", textfont=dict(color=INK), xgap=2, ygap=2)
+    star_note = "⭐ winner (CI-beats BH)" if win_sig else "⭐ winner (not CI-significant vs BH)"
     f1.add_scatter(x=[str(winner["delta"])], y=[str(winner["alpha"])],
-                   mode="markers", showlegend=False,
+                   mode="markers", name=star_note, showlegend=True,
                    marker=dict(symbol="star", size=16, color=INK,
                                line=dict(color=SURFACE, width=1)))
+    f1.update_xaxes(type="category")
+    f1.update_yaxes(type="category")
 
     P, _, _ = _grid_matrix(comparison, "p_loss")
     f2 = go.Figure(layout=_base_layout(
@@ -206,6 +208,8 @@ def fig_grid_heatmaps(comparison: pd.DataFrame, suffix: str) -> tuple[go.Figure,
                    colorscale=SEQ_BLUE, zmin=0, zmax=float(np.nanmax(P)) or 1.0,
                    colorbar=dict(title="P(loss)"),
                    texttemplate="%{z:.3f}", textfont=dict(color=SURFACE), xgap=2, ygap=2)
+    f2.update_xaxes(type="category")
+    f2.update_yaxes(type="category")
     return f1, f2
 
 
@@ -235,6 +239,8 @@ def fig_headline_interaction(interaction: pd.DataFrame) -> go.Figure:
         fig.add_scatter(x=xs, y=ys, mode="markers", showlegend=False,
                         marker=dict(symbol="x-thin", size=18, color=INK,
                                     line=dict(color=INK, width=2)))
+    fig.update_xaxes(type="category")
+    fig.update_yaxes(type="category")
     return fig
 
 

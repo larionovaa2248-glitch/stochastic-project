@@ -265,15 +265,14 @@ with tab_lab:
                                       S["cost"], S["unit"],
                                       initial_reps=max(1000, S["n_reps"]))
             profits = rlc["profits"]
-            batch = cached_paths(S["q0"], S["T"], S["sigma_q"], S["sigma_p"],
-                                 S["kappa"], S["variant"], len(profits) if False else S["n_reps"], S["seed"])
             st.info(f"Run-length control: {'converged' if rlc['converged'] else 'hit the cap'} "
                     f"at n = {rlc['summary']['n']:,} replications "
-                    f"(CI half-width {rlc['summary']['half_width']:.4f} ≤ tolerance {rlc_tol}).")
-            bh_batch = cached_paths(S["q0"], S["T"], S["sigma_q"], S["sigma_p"],
-                                    S["kappa"], S["variant"], S["n_reps"], S["seed"])
-            bh_profits = profits_on_paths(bh_batch, BuyAndHoldPolicy(), S["cost"], S["unit"])
-            pol_on_common = profits_on_paths(bh_batch, policy, S["cost"], S["unit"])
+                    f"(CI half-width {rlc['summary']['half_width']:.4f} vs tolerance {rlc_tol}).")
+            # Paired comparison still uses one common batch at the slider size.
+            common = cached_paths(S["q0"], S["T"], S["sigma_q"], S["sigma_p"],
+                                  S["kappa"], S["variant"], S["n_reps"], S["seed"])
+            bh_profits = profits_on_paths(common, BuyAndHoldPolicy(), S["cost"], S["unit"])
+            pol_on_common = profits_on_paths(common, policy, S["cost"], S["unit"])
         else:
             batch = cached_paths(S["q0"], S["T"], S["sigma_q"], S["sigma_p"],
                                  S["kappa"], S["variant"], S["n_reps"], S["seed"])
