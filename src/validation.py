@@ -49,13 +49,21 @@ def zero_noise_check(n_reps: int = 4000, seed: int = 20260810) -> dict:
         _, path_trades = run_policy_path(pol, paths.p[i], int(paths.y[i]))
         trades += len(path_trades)
 
+    bh = buy_and_hold_profits(paths)
     grid_means = {}
     grid_ses = {}
+    grid_diff_means = {}
+    grid_diff_ses = {}
     for alpha, delta in EMA_GRID:
         profits = ema_profits(paths, alpha=alpha, delta=delta)
         grid_means[(alpha, delta)] = float(profits.mean())
         grid_ses[(alpha, delta)] = float(profits.std(ddof=1) / np.sqrt(n_reps))
-    bh = buy_and_hold_profits(paths)
+        # Paired difference on common paths (CRN, Lecture 7): the right SE for
+        # comparing a policy with buy-and-hold, much tighter than combining
+        # the two marginal SEs as if independent.
+        diff = profits - bh
+        grid_diff_means[(alpha, delta)] = float(diff.mean())
+        grid_diff_ses[(alpha, delta)] = float(diff.std(ddof=1) / np.sqrt(n_reps))
 
     return {
         "max_price_gap": max_price_gap,
@@ -63,6 +71,8 @@ def zero_noise_check(n_reps: int = 4000, seed: int = 20260810) -> dict:
         "degenerate_trades_on_subsample": trades,
         "grid_means": grid_means,
         "grid_ses": grid_ses,
+        "grid_diff_means": grid_diff_means,
+        "grid_diff_ses": grid_diff_ses,
         "bh_mean": float(bh.mean()),
         "bh_se": float(bh.std(ddof=1) / np.sqrt(n_reps)),
     }
@@ -112,41 +122,79 @@ def calibration_check(
     return out
 
 
+class _FutureSensitiveProbe:
+    """A canary policy whose decisions depend on the WHOLE history it is shown.
+
+    It trades on max(price_history), so if the evaluation harness ever leaks
+    any future price into price_history — even one index — its pre-leak
+    decisions change immediately.  Used only by no_lookahead_check; it mirrors
+    the Policy interface (reset/decide) without being a real strategy.
+    """
+
+    name = "future-sensitive probe"
+
+    def reset(self) -> None:
+        self._bought = False
+
+    def decide(self, price_history: np.ndarray) -> int:
+        if not self._bought and float(np.max(price_history)) > 0.60:
+            self._bought = True
+            return +1
+        return 0
+
+
 def no_lookahead_check(seed: int = 20260813) -> dict:
     """Section 7 check 4: policies can only use PAST data.
 
     Structural argument: Policy.decide receives a copy of p_0..p_t and nothing
-    else — there is no way to read q_t, the outcome, or future prices.
+    else — there is no way to read q_t, the outcome, or future prices (the
+    test suite additionally asserts the interface signature and that the real
+    harness hands each policy exactly p[0..t] as a fresh copy).
 
-    Behavioural check performed here: take a price path, record every decision
-    of an EMA policy period by period; then (a) perturb a FUTURE price and
-    confirm all decisions up to the perturbation point are bit-identical, and
-    (b) perturb a PAST price and confirm decisions CAN change — together these
-    show decisions depend on past prices and only past prices.
+    Behavioural check — run through the REAL evaluation harness
+    (run_policy_path) on full price series, never a re-implementation of its
+    slicing: (a) shock all prices from t_perturb onward (+0.30) and confirm
+    every trade decision strictly BEFORE t_perturb is identical to the
+    unshocked run, for both the EMA policy and a deliberately future-hungry
+    probe policy that trades on max(history) and would flip immediately if the
+    harness leaked even one future price; (b) shock only PAST prices and
+    confirm decisions do change, showing the check has power to detect
+    dependence on the data it perturbs.
     """
     params = MarketParams(q0=0.40, T=60, sigma_q=0.03, sigma_p=0.05)
     paths = simulate_market_seeded(params, 1, seed)
     prices = paths.p[0].copy()
+    y = int(paths.y[0])
     t_perturb = 40
-
-    def decisions(p: np.ndarray, upto: int) -> list[int]:
-        pol = EMAThresholdPolicy(alpha=0.3, delta=0.02, allow_exit=True)
-        pol.reset()
-        return [int(pol.decide(p[: t + 1].copy())) for t in range(upto)]
-
-    base = decisions(prices, t_perturb)
 
     future_shocked = prices.copy()
     future_shocked[t_perturb:] = np.clip(future_shocked[t_perturb:] + 0.30, 0.01, 0.99)
-    after_future_shock = decisions(future_shocked, t_perturb)
+    # The shock must actually change the data for leg (a) to mean anything.
+    assert not np.array_equal(prices, future_shocked)
 
     past_shocked = prices.copy()
     past_shocked[: t_perturb - 5] = np.clip(past_shocked[: t_perturb - 5] - 0.30, 0.01, 0.99)
-    after_past_shock = decisions(past_shocked, t_perturb)
+
+    def early_trades(policy, p: np.ndarray) -> list[tuple[int, int]]:
+        _, trades = run_policy_path(policy, p, y)
+        return [(tr.t, tr.units) for tr in trades if tr.t < t_perturb]
+
+    ema = EMAThresholdPolicy(alpha=0.3, delta=0.02, allow_exit=True)
+    probe = _FutureSensitiveProbe()
+
+    future_leak_detected = any(
+        early_trades(pol, prices) != early_trades(pol, future_shocked)
+        for pol in (ema, probe)
+    )
+    past_changed = early_trades(ema, prices) != early_trades(ema, past_shocked)
+    # The probe must be live (it does buy somewhere on the shocked series) —
+    # otherwise it could not have detected a leak even if one existed.
+    _, probe_trades = run_policy_path(probe, future_shocked, y)
 
     return {
-        "future_perturbation_changed_decisions": base != after_future_shock,
-        "past_perturbation_changed_decisions": base != after_past_shock,
+        "future_perturbation_changed_decisions": future_leak_detected,
+        "past_perturbation_changed_decisions": past_changed,
+        "probe_active_on_shocked_series": len(probe_trades) > 0,
     }
 
 

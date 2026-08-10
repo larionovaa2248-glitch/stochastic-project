@@ -66,12 +66,18 @@ class TestZeroNoise:
         # With p_t = q_t every entry happens at a fair price, so by optional
         # stopping on the martingale q_t all policies (including buy-and-hold)
         # have expected profit 0; the sample means must agree within 4 SE.
+        # The policy-vs-BH comparison uses the PAIRED difference on common
+        # paths (CRN, Lecture 7) — the correlated marginals would give an
+        # SE ~3x too wide and much weaker power to catch a real bias.
         assert abs(result["bh_mean"]) < Z * result["bh_se"]
         for key, mean in result["grid_means"].items():
             se = result["grid_ses"][key]
             assert abs(mean) < Z * max(se, 1e-12), f"policy {key} mean {mean}"
-            gap_se = np.hypot(se, result["bh_se"])
-            assert abs(mean - result["bh_mean"]) < Z * max(gap_se, 1e-12)
+            diff = result["grid_diff_means"][key]
+            diff_se = result["grid_diff_ses"][key]
+            assert abs(diff) < Z * max(diff_se, 1e-12), (
+                f"policy {key} paired diff vs BH {diff} exceeds {Z} SE {diff_se}"
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -109,8 +115,14 @@ def test_calibration_settlement_frequency_matches_q0_grid():
 
 class TestNoLookahead:
     def test_future_prices_cannot_affect_decisions(self):
+        # Runs the REAL harness (run_policy_path) on full series with a shocked
+        # future tail; includes a future-hungry probe policy that would flip
+        # immediately if the harness leaked any future price.
         result = no_lookahead_check()
         assert not result["future_perturbation_changed_decisions"]
+        assert result["probe_active_on_shocked_series"], (
+            "probe never trades — the leak canary has no detection power"
+        )
 
     def test_past_prices_do_affect_decisions(self):
         result = no_lookahead_check()
