@@ -1,0 +1,51 @@
+{
+  "will-josh-stein-win-the-2028-democratic-presidential-nominat": {
+    "question": "Will Josh Stein win the 2028 Democratic presidential nomination?",
+    "slug": "will-josh-stein-win-the-2028-democratic-presidential-nomination",
+    "url": "https://polymarket.com/market/will-josh-stein-win-the-2028-democratic-presidential-nomination",
+    "n_obs": 418,
+    "endDate": "2028-11-07T00:00:00Z",
+    "volume": "938280.068992",
+    "liquidity": "1847089.56315",
+    "closed": false
+  },
+  "will-adanech-abiebie-be-the-next-prime-minister-of-ethiopia": {
+    "question": "Will Adanech Abiebie be the next Prime Minister of Ethiopia?",
+    "slug": "will-adanech-abiebie-be-the-next-prime-minister-of-ethiopia",
+    "url": "https://polymarket.com/market/will-adanech-abiebie-be-the-next-prime-minister-of-ethiopia",
+    "n_obs": 703,
+    "endDate": "2026-06-01T00:00:00Z",
+    "volume": "76722451.09993298",
+    "liquidity": "16771.09399",
+    "closed": false
+  },
+  "strait-of-hormuz-traffic-returns-to-normal-by-august-31-2026": {
+    "question": "Strait of Hormuz traffic returns to normal by August 31?",
+    "slug": "strait-of-hormuz-traffic-returns-to-normal-by-august-31-20260702154212320",
+    "url": "https://polymarket.com/market/strait-of-hormuz-traffic-returns-to-normal-by-august-31-20260702154212320",
+    "n_obs": 742,
+    "endDate": "2026-08-31T00:00:00Z",
+    "volume": "11195915.957574",
+    "liquidity": "1394429.34717",
+    "closed": false
+  },
+  "will-nvidia-be-the-largest-company-in-the-world-by-market-ca": {
+    "question": "Will NVIDIA be the largest company in the world by market cap on December 31?",
+    "slug": "will-nvidia-be-the-largest-company-in-the-world-by-market-cap-on-december-31-244",
+    "url": "https://polymarket.com/market/will-nvidia-be-the-largest-company-in-the-world-by-market-cap-on-december-31-244",
+    "n_obs": 743,
+    "endDate": "2026-12-31T00:00:00Z",
+    "volume": "998693.6110609995",
+    "liquidity": "73238.802",
+    "closed": false
+  },
+  "will-the-republicans-win-the-arkansas-senate-race-in-2026": {
+    "question": "Will the Republicans win the Arkansas Senate race in 2026?",
+    "slug": "will-the-republicans-win-the-arkansas-senate-race-in-2026",
+    "url": "https://polymarket.com/market/will-the-republicans-win-the-arkansas-senate-race-in-2026",
+    "n_obs": 708,
+    "volume": "9986.882666999996",
+    "liquidity": "14530.3392",
+    "closed": false
+  }
+}
