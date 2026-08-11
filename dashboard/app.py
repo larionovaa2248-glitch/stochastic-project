@@ -410,7 +410,7 @@ with tab_sens:
 with tab_about:
     st.subheader("What this simulator does")
     st.markdown(
-        """
+        r"""
 **The market, in three layers** *(professor-approved model — Section 3 of PROJECT.md)*
 
 1. **A hidden truth.** Each contract has a true probability of paying out,

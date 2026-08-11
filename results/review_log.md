@@ -74,6 +74,28 @@ headline table records CI-significance (`any_ema_beats_bh`) rather than a bare
 mean comparison. Headline result documented in the Phase-2 commit message,
 reproducible with seed 20260812.
 
+## Final audit (2026-08-10)
+
+A three-auditor adversarial workflow (spec/rubric coverage, numeric-claim
+verification, runnability) was launched but its agents were cut off by an
+account usage limit, so the audit was completed inline instead:
+
+- **Pushed state:** working tree clean; local `main` == `origin/main` on
+  GitHub after every phase commit.
+- **Runnability:** `pytest` 31/31 green; all `src` modules import;
+  `dashboard/app.py` compiles; dashboard verified interactively in the
+  browser (all five tabs, live Polymarket fetch, prefill, offline fallback).
+- **Numeric claims:** every figure in `results/summary.md` was extracted
+  programmatically from the CSVs it cites at writing time (not typed from
+  memory); the executed `notebooks/analysis.ipynb` recomputes the same
+  tables from the same CSVs.
+- **Fix applied:** Python 3.14 SyntaxWarning for `\$` escapes in the About
+  tab markdown (now a raw string).
+
+Re-running the multi-agent audit once limits reset is recommended but not
+blocking; the per-phase reviews above already covered the engine (the
+highest-risk 30% of the rubric) adversarially.
+
 ## Phase 3 review notes — calibration (2026-08-10)
 
 Scope guard honoured: calibration only sets inputs (q0, sigma_q, sigma_p), no
