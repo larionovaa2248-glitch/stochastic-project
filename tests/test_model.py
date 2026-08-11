@@ -222,6 +222,75 @@ def test_never_trade_is_exactly_zero_stepwise():
         assert profit == 0.0 and trades == []
 
 
+# ---------------------------------------------------------------------------
+# News-jump extension (default OFF — beyond the locked Section-3 model)
+# ---------------------------------------------------------------------------
+
+class TestNewsJumpExtension:
+    def test_default_off_random_stream_is_bit_identical_to_approved_model(self):
+        # Golden values captured from the approved engine BEFORE the jump
+        # extension existed.  If this fails, the default model's random
+        # stream changed and every committed seeded result is invalidated.
+        params = MarketParams(q0=0.40, T=50, sigma_q=0.02, sigma_p=0.05,
+                              kappa=0.3, variant="B")
+        paths = simulate_market_seeded(params, 5, 12345)
+        assert paths.jumps is None
+        assert paths.q[0, -1] == pytest.approx(0.42868170113759463, abs=0)
+        assert paths.q[3, 17] == pytest.approx(0.3722119657019202, abs=0)
+        assert paths.p[1, -1] == pytest.approx(0.33088669475400173, abs=0)
+        assert paths.p[4, 29] == pytest.approx(0.39058795886049547, abs=0)
+        assert paths.y.tolist() == [1, 0, 0, 0, 1]
+        assert float(paths.q.sum()) == pytest.approx(100.95350009329613, abs=1e-9)
+        assert float(paths.p.sum()) == pytest.approx(99.51350911438229, abs=1e-9)
+
+    def test_jump_rate_zero_matches_default_exactly(self):
+        base = MarketParams(jump_rate=0.0, jump_scale=0.5)
+        default = MarketParams()
+        a = simulate_market_seeded(base, 100, seed=77)
+        b = simulate_market_seeded(default, 100, seed=77)
+        assert np.array_equal(a.q, b.q) and np.array_equal(a.p, b.p)
+        assert np.array_equal(a.y, b.y)
+
+    def test_jumps_fire_at_roughly_the_poisson_rate_and_move_paths(self):
+        params = MarketParams(q0=0.5, T=200, sigma_q=0.01, jump_rate=0.05,
+                              jump_scale=0.30)
+        paths = simulate_market_seeded(params, 2000, seed=88)
+        assert paths.jumps is not None and paths.jumps.shape == (2000, 200)
+        rate = paths.jumps.mean()
+        se = np.sqrt(0.05 * 0.95 / paths.jumps.size)
+        assert abs(rate - 0.05) < Z * se
+        # Jump periods move the truth much more than diffusion-only periods.
+        dq = np.abs(np.diff(paths.q, axis=1))
+        assert dq[paths.jumps].mean() > 3 * dq[~paths.jumps].mean()
+
+    def test_martingale_and_settlement_calibration_survive_jumps(self):
+        # Zero-mean jumps keep E[q_{t+1} | q_t] = q_t, so the Section-7
+        # martingale and settlement properties must still hold with jumps on.
+        params = MarketParams(q0=0.40, T=50, sigma_q=0.02, sigma_p=0.02,
+                              jump_rate=0.04, jump_scale=0.20)
+        paths = simulate_market_seeded(params, 20000, seed=99)
+        q_T = paths.q[:, -1]
+        se_q = q_T.std(ddof=1) / np.sqrt(len(q_T))
+        assert abs(q_T.mean() - 0.40) < Z * se_q
+        se_y = paths.y.std(ddof=1) / np.sqrt(len(paths.y))
+        assert abs(paths.y.mean() - 0.40) < Z * se_y
+
+    def test_jump_paths_respect_bounds(self):
+        params = MarketParams(q0=0.10, T=100, sigma_q=0.05, jump_rate=0.2,
+                              jump_scale=0.8, sigma_p=0.05, kappa=0.2, variant="B")
+        paths = simulate_market_seeded(params, 500, seed=101)
+        assert np.all(paths.q >= 0.001) and np.all(paths.q <= 0.999)
+        assert np.all(paths.p >= 0.01) and np.all(paths.p <= 0.99)
+
+    def test_jump_param_validation(self):
+        with pytest.raises(ValueError):
+            MarketParams(jump_rate=1.0)
+        with pytest.raises(ValueError):
+            MarketParams(jump_rate=-0.1)
+        with pytest.raises(ValueError):
+            MarketParams(jump_scale=-0.5)
+
+
 def test_param_validation_rejects_bad_inputs():
     with pytest.raises(ValueError):
         MarketParams(q0=1.5)

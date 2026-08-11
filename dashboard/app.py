@@ -54,16 +54,20 @@ st.set_page_config(page_title="Prediction Market Simulator", page_icon="🎲", l
 # ---------------------------------------------------------------------------
 
 @st.cache_data(show_spinner=False)
-def cached_paths(q0, T, sigma_q, sigma_p, kappa, variant, n_reps, seed):
+def cached_paths(q0, T, sigma_q, sigma_p, kappa, variant, n_reps, seed,
+                 jump_rate=0.0, jump_scale=0.15):
     params = MarketParams(q0=q0, T=T, sigma_q=sigma_q, sigma_p=sigma_p,
-                          kappa=kappa, variant=variant)
+                          kappa=kappa, variant=variant,
+                          jump_rate=jump_rate, jump_scale=jump_scale)
     return simulate_market_seeded(params, n_reps, seed)
 
 
 @st.cache_data(show_spinner=False)
-def cached_comparison(q0, T, sigma_q, sigma_p, kappa, variant, n_reps, seed, cost):
+def cached_comparison(q0, T, sigma_q, sigma_p, kappa, variant, n_reps, seed, cost,
+                      jump_rate=0.0, jump_scale=0.15):
     params = MarketParams(q0=q0, T=T, sigma_q=sigma_q, sigma_p=sigma_p,
-                          kappa=kappa, variant=variant)
+                          kappa=kappa, variant=variant,
+                          jump_rate=jump_rate, jump_scale=jump_scale)
     return compare_policies(params, n_reps, seed, cost)
 
 
@@ -81,7 +85,8 @@ def cached_market(slug_or_url: str | None):
 
 def market_params_from_sidebar(s) -> MarketParams:
     return MarketParams(q0=s["q0"], T=s["T"], sigma_q=s["sigma_q"],
-                        sigma_p=s["sigma_p"], kappa=s["kappa"], variant=s["variant"])
+                        sigma_p=s["sigma_p"], kappa=s["kappa"], variant=s["variant"],
+                        jump_rate=s["eff_jump_rate"], jump_scale=s["jump_scale"])
 
 
 # ---------------------------------------------------------------------------
@@ -90,7 +95,8 @@ def market_params_from_sidebar(s) -> MarketParams:
 
 DEFAULTS = dict(q0=0.40, T=100, sigma_q=0.02, sigma_p=0.05, kappa=0.30,
                 variant="B", alpha=0.30, delta=0.05, cost=0.00, unit=1,
-                n_reps=2000, seed=42)
+                n_reps=2000, seed=42, jumps_on=False, jump_rate=0.04,
+                jump_scale=0.20)
 
 for k, v in DEFAULTS.items():
     st.session_state.setdefault(k, v)
@@ -124,6 +130,19 @@ with st.sidebar:
               disabled=st.session_state["variant"] == "A",
               help="Price adjustment speed. κ=1 reproduces variant A; small κ "
                    "means mispricings decay slowly.")
+
+    with st.expander("🗞️ News jumps (extension — default off)"):
+        st.caption("Beyond the professor-approved model: rare big shocks to "
+                   "the hidden truth, arriving as a Poisson process "
+                   "(Bernoulli per period). Zero-mean, so settlement "
+                   "calibration still holds. Off = the approved model, "
+                   "bit-for-bit.")
+        st.toggle("Enable news jumps", key="jumps_on")
+        st.slider("News rate λ (events/period)", 0.01, 0.25, key="jump_rate",
+                  step=0.01, disabled=not st.session_state["jumps_on"])
+        st.slider("Jump size (std, before damping)", 0.05, 0.80,
+                  key="jump_scale", step=0.05,
+                  disabled=not st.session_state["jumps_on"])
 
     st.header("Trading policy (EMA-threshold)")
     st.slider("Smoothing α", 0.05, 1.0, key="alpha", step=0.05)
@@ -182,6 +201,8 @@ with st.sidebar:
 
 S = {k: st.session_state[k] for k in DEFAULTS}
 S["allow_exit"] = st.session_state.get("allow_exit", False)
+# jump_rate=0 means the extension consumes no randomness at all (approved model)
+S["eff_jump_rate"] = S["jump_rate"] if S["jumps_on"] else 0.0
 params = market_params_from_sidebar(S)
 policy = EMAThresholdPolicy(S["alpha"], S["delta"], S["allow_exit"])
 POLICY_LABEL = f"EMA(α={S['alpha']:.2f}, δ={S['delta']:.2f})"
@@ -206,7 +227,8 @@ with tab_path:
 
     path_seed = S["seed"] + 100_000 * st.session_state["resim_offset"]
     paths = cached_paths(S["q0"], S["T"], S["sigma_q"], S["sigma_p"],
-                         S["kappa"], S["variant"], 1, path_seed)
+                         S["kappa"], S["variant"], 1, path_seed,
+                         S["eff_jump_rate"], S["jump_scale"])
     q, p, y = paths.q[0], paths.p[0], int(paths.y[0])
     profit, trades = run_policy_path(policy, p, y, S["cost"], S["unit"])
 
@@ -220,6 +242,11 @@ with tab_path:
     tt = np.arange(len(p))
     fig.add_scatter(x=tt, y=q, name="hidden truth q_t — the truth you can't see",
                     line=dict(color=ORANGE, width=2, dash="dash"))
+    if paths.jumps is not None and paths.jumps[0].any():
+        jt = np.flatnonzero(paths.jumps[0]) + 1  # jump at t moves q[t+1]
+        fig.add_scatter(x=jt, y=q[jt], mode="markers", name="news jump",
+                        marker=dict(symbol="diamond-open", size=11,
+                                    color=ORANGE, line=dict(width=2)))
     fig.add_scatter(x=tt, y=p, name="observed market price p_t",
                     line=dict(color=BLUE, width=2))
     fig.add_scatter(x=tt, y=f, name=f"EMA fair value f_t (α={S['alpha']:.2f})",
@@ -270,12 +297,14 @@ with tab_lab:
                     f"(CI half-width {rlc['summary']['half_width']:.4f} vs tolerance {rlc_tol}).")
             # Paired comparison still uses one common batch at the slider size.
             common = cached_paths(S["q0"], S["T"], S["sigma_q"], S["sigma_p"],
-                                  S["kappa"], S["variant"], S["n_reps"], S["seed"])
+                                  S["kappa"], S["variant"], S["n_reps"], S["seed"],
+                                  S["eff_jump_rate"], S["jump_scale"])
             bh_profits = profits_on_paths(common, BuyAndHoldPolicy(), S["cost"], S["unit"])
             pol_on_common = profits_on_paths(common, policy, S["cost"], S["unit"])
         else:
             batch = cached_paths(S["q0"], S["T"], S["sigma_q"], S["sigma_p"],
-                                 S["kappa"], S["variant"], S["n_reps"], S["seed"])
+                                 S["kappa"], S["variant"], S["n_reps"], S["seed"],
+                                 S["eff_jump_rate"], S["jump_scale"])
             profits = profits_on_paths(batch, policy, S["cost"], S["unit"])
             bh_profits = profits_on_paths(batch, BuyAndHoldPolicy(), S["cost"], S["unit"])
             pol_on_common = profits
@@ -326,7 +355,8 @@ with tab_grid:
     with st.spinner("Evaluating 9 policies + benchmarks…"):
         comparison = cached_comparison(S["q0"], S["T"], S["sigma_q"], S["sigma_p"],
                                        S["kappa"], S["variant"],
-                                       S["n_reps"], S["seed"], S["cost"])
+                                       S["n_reps"], S["seed"], S["cost"],
+                                       S["eff_jump_rate"], S["jump_scale"])
     fig_profit, fig_ploss = fig_grid_heatmaps(
         comparison, f"variant {S['variant']}"
         + (f", κ={S['kappa']:.2f}" if S["variant"] == "B" else ""))
@@ -354,9 +384,11 @@ with tab_sens:
 
     @st.cache_data(show_spinner=False)
     def sens_curves(q0, T, sigma_q, sigma_p, kappa, variant,
-                    alpha, delta, allow_exit, cost, unit, n_reps, seed):
+                    alpha, delta, allow_exit, cost, unit, n_reps, seed,
+                    jump_rate=0.0, jump_scale=0.15):
         base = MarketParams(q0=q0, T=T, sigma_q=sigma_q, sigma_p=sigma_p,
-                            kappa=kappa, variant=variant)
+                            kappa=kappa, variant=variant,
+                            jump_rate=jump_rate, jump_scale=jump_scale)
         pol = EMAThresholdPolicy(alpha, delta, allow_exit)
         rows = []
         for i, sp in enumerate(sigma_grid):
@@ -379,7 +411,8 @@ with tab_sens:
     with st.spinner("Sweeping σ_p and κ…"):
         curves = sens_curves(S["q0"], S["T"], S["sigma_q"], S["sigma_p"], S["kappa"],
                              S["variant"], S["alpha"], S["delta"], S["allow_exit"],
-                             S["cost"], S["unit"], n_sens, S["seed"])
+                             S["cost"], S["unit"], n_sens, S["seed"],
+                             S["eff_jump_rate"], S["jump_scale"])
 
     def sweep_fig(sweep: str, xlabel: str, title: str) -> go.Figure:
         fig = go.Figure(layout=_base_layout(title, xlabel,
@@ -447,6 +480,14 @@ buy-and-hold **at every persistence level κ ∈ [0.05, 1]**, even with a 2-cent
 per-trade cost; the edge peaks near κ ≈ 0.2–0.3 (≈ +\$0.10 per \$1 contract) and
 vanishes only when observation noise vanishes. Persistence shapes the edge —
 noise creates it.
+
+**Optional extension — news jumps (default off).** The sidebar's 🗞️ toggle
+adds rare, large, zero-mean shocks to the hidden truth, arriving as a Poisson
+process (Bernoulli per period, geometric interarrivals — the discrete
+analogue of exponential ones). This goes *beyond* the professor-approved
+model, so it ships off by default and every reported result uses the
+approved model; with it on, watch the Policy Lab — dip-buying starts
+catching real bad news instead of noise, and the EMA edge shrinks.
 
 **Scope guard.** Real Polymarket data only *sets inputs* (q₀ and volatilities,
 estimated by method of moments). We do **not** fit the model to real data or

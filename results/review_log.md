@@ -74,6 +74,26 @@ headline table records CI-significance (`any_ema_beats_bh`) rather than a bare
 mean comparison. Headline result documented in the Phase-2 commit message,
 reproducible with seed 20260812.
 
+## Extension: Poisson news jumps (2026-08-11) — SPEC FLAG per Section 9
+
+Section 3 marks the model as LOCKED. At the team owner's request we added an
+**optional, default-OFF** extension rather than changing the approved model:
+with per-period probability `jump_rate` (Bernoulli arrivals = discrete-time
+Poisson process, geometric interarrivals), Layer 1 takes an extra zero-mean
+N(0, jump_scale²) shock, damped by the same sqrt(q(1-q)) factor.
+
+Safeguards:
+- `jump_rate = 0` (the default everywhere) consumes **no** extra random
+  numbers, so the approved model's seeded output is bit-for-bit unchanged —
+  pinned by a golden-value test captured from the pre-extension engine.
+- Zero-mean jumps preserve the martingale property, so the Section-7
+  martingale and settlement-calibration checks hold with jumps on (tested).
+- All committed results (results/, report/figures/, summary.md) use the
+  approved model only. The dashboard exposes the extension behind a clearly
+  labelled toggle marked "beyond the professor-approved model".
+- **Professor sign-off pending** — until given, the extension stays a
+  demo/limitations talking point, not a reported result.
+
 ## Final audit (2026-08-10)
 
 A three-auditor adversarial workflow (spec/rubric coverage, numeric-claim

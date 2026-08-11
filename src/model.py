@@ -24,6 +24,20 @@ Layer 3 — settlement:
 Every stochastic function takes an explicit rng: numpy.random.Generator, and
 all randomness flows through standard normal draws or the inverse transform
 method (course requirement; see the Lecture 2 citations inline).
+
+OPTIONAL EXTENSION (default OFF — beyond the locked Section-3 model):
+"news jumps" in Layer 1.  With per-period probability jump_rate the hidden
+probability takes an extra zero-mean shock of scale jump_scale on top of its
+usual diffusion step.  The Bernoulli(jump_rate)-per-period arrivals are the
+discrete-time Poisson arrival process (geometric interarrival times, the
+discrete analogue of exponential ones — course material on arrival
+processes); jump sizes are damped by the same sqrt(q(1-q)) factor so jumps
+respect the barriers.  Zero-mean jumps keep q_t a martingale, so the
+Section-7 martingale and settlement-calibration properties still hold.
+When jump_rate == 0 (the default) NO extra random numbers are consumed, so
+every seeded result produced by the approved model is bit-for-bit unchanged
+(pinned by a golden-value test).  Flagged in results/review_log.md per
+Section 9; professor sign-off pending.
 """
 
 from __future__ import annotations
@@ -49,6 +63,11 @@ class MarketParams:
     sigma_p : std dev of the observation noise eta_t (Layer 2)
     kappa   : partial-adjustment speed in (0, 1]; only used by Variant B
     variant : "A" (iid noise) or "B" (partial adjustment)
+
+    Optional news-jump extension (default OFF; see module docstring):
+    jump_rate  : per-period probability of a news event (Poisson arrivals in
+                 discrete time); 0 disables the extension entirely
+    jump_scale : std dev of a jump, before sqrt(q(1-q)) damping
     """
 
     q0: float = 0.40
@@ -57,6 +76,8 @@ class MarketParams:
     sigma_p: float = 0.02
     kappa: float = 1.0
     variant: str = "A"
+    jump_rate: float = 0.0
+    jump_scale: float = 0.15
 
     def __post_init__(self) -> None:
         if not (0.0 < self.q0 < 1.0):
@@ -69,6 +90,10 @@ class MarketParams:
             raise ValueError(f"kappa must be in (0, 1], got {self.kappa}")
         if self.variant not in ("A", "B"):
             raise ValueError(f"variant must be 'A' or 'B', got {self.variant!r}")
+        if not (0.0 <= self.jump_rate < 1.0):
+            raise ValueError(f"jump_rate must be in [0, 1), got {self.jump_rate}")
+        if self.jump_scale < 0:
+            raise ValueError(f"jump_scale must be >= 0, got {self.jump_scale}")
 
 
 @dataclass(frozen=True)
@@ -79,11 +104,14 @@ class MarketPaths:
         trading policies must never receive this array.
     p : (n_reps, T+1) observed market price paths — the only thing traders see.
     y : (n_reps,) settlement outcomes in {0, 1}, Y ~ Bernoulli(q_T).
+    jumps : (n_reps, T) booleans marking periods where a news jump fired, or
+        None when the jump extension is off (for plots only, like q).
     """
 
     q: np.ndarray
     p: np.ndarray
     y: np.ndarray
+    jumps: np.ndarray | None = None
 
     @property
     def n_reps(self) -> int:
@@ -94,7 +122,9 @@ class MarketPaths:
         return self.q.shape[1] - 1
 
 
-def simulate_hidden(params: MarketParams, n_reps: int, rng: np.random.Generator) -> np.ndarray:
+def simulate_hidden(
+    params: MarketParams, n_reps: int, rng: np.random.Generator
+) -> tuple[np.ndarray, np.ndarray | None]:
     """Layer 1: simulate the hidden true probability q_t for all replications.
 
     Vectorised over replications: the whole batch is one (n_reps, T+1) array
@@ -103,18 +133,36 @@ def simulate_hidden(params: MarketParams, n_reps: int, rng: np.random.Generator)
 
     Z_t are standard normal draws from the passed Generator (conceptually
     Z = Phi^{-1}(U), the inverse transform method of Lecture 2).
+
+    Optional news jumps (module docstring): when jump_rate > 0, each period
+    additionally fires a Bernoulli(jump_rate) news event — the discrete-time
+    Poisson arrival process — adding a zero-mean N(0, jump_scale^2) shock,
+    damped by the same sqrt(q(1-q)) factor.  The jump draws happen ONLY when
+    jump_rate > 0 so the default model consumes the identical random stream
+    it always has (seeded results are bit-for-bit unchanged; golden test).
+
+    Returns (q, jumps) where jumps is the (n_reps, T) fired-event mask, or
+    None when the extension is off.
     """
     T = params.T
     # All shocks drawn up front in a fixed order so a fixed seed gives a
     # fully reproducible batch.
     Z = rng.standard_normal((n_reps, T))
+    jumping = params.jump_rate > 0.0
+    if jumping:
+        # Inverse transform for the Bernoulli arrivals (Lecture 2): U < rate.
+        B = rng.random((n_reps, T)) < params.jump_rate
+        G = rng.standard_normal((n_reps, T))
     q = np.empty((n_reps, T + 1))
     q[:, 0] = params.q0
     for t in range(T):
         qt = q[:, t]
-        step = params.sigma_q * np.sqrt(qt * (1.0 - qt)) * Z[:, t]
+        damp = np.sqrt(qt * (1.0 - qt))
+        step = params.sigma_q * damp * Z[:, t]
+        if jumping:
+            step = step + B[:, t] * params.jump_scale * damp * G[:, t]
         q[:, t + 1] = np.clip(qt + step, EPS_Q, 1.0 - EPS_Q)
-    return q
+    return q, (B if jumping else None)
 
 
 def observe_prices(
@@ -160,10 +208,10 @@ def simulate_market(params: MarketParams, n_reps: int, rng: np.random.Generator)
     Variant A and Variant B consume identical draws — which makes cross-variant
     comparisons use common random numbers (variance reduction, Lecture 7).
     """
-    q = simulate_hidden(params, n_reps, rng)
+    q, jumps = simulate_hidden(params, n_reps, rng)
     p = observe_prices(q, params, rng)
     y = settle(q[:, -1], rng)
-    return MarketPaths(q=q, p=p, y=y)
+    return MarketPaths(q=q, p=p, y=y, jumps=jumps)
 
 
 def simulate_market_seeded(params: MarketParams, n_reps: int, seed: int) -> MarketPaths:

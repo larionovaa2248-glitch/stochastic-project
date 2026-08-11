@@ -43,6 +43,12 @@ shapes it.** All numbers with 95% CIs in [results/summary.md](results/summary.md
 (master seed 20260812); analysis walkthrough in
 [notebooks/analysis.ipynb](notebooks/analysis.ipynb).
 
+**Optional extension (default off):** a "news jumps" toggle in the dashboard
+adds rare zero-mean shocks to the hidden truth via Poisson arrivals
+(Bernoulli per period). It is off by default and consumes no randomness when
+off, so all reported results use the professor-approved model unchanged
+(guarded by a golden-value test; see `results/review_log.md`).
+
 ## Layout
 
 See [PROJECT.md](PROJECT.md) for the full specification, model definition, and build plan.
