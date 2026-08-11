@@ -288,6 +288,103 @@ def fig_run_length(rlc: pd.DataFrame) -> go.Figure:
     return fig
 
 
+def fig_variant_ab(seed: int = MASTER_SEED + 13) -> go.Figure:
+    """Variant A vs Variant B on the SAME hidden truth and noise draws.
+
+    A and B consume identical random numbers (fixed draw order), so with one
+    seed the only difference between the two price lines is the adjustment
+    mechanism itself — the cleanest possible A-vs-B illustration.
+    """
+    pa = replace(BASELINE, variant="A", kappa=1.0, T=100)
+    pb = replace(BASELINE, variant="B", kappa=0.2, T=100)
+    a = simulate_market_seeded(pa, 1, seed)
+    b = simulate_market_seeded(pb, 1, seed)
+    assert np.array_equal(a.q, b.q)  # same truth by construction
+    tt = np.arange(a.q.shape[1])
+    fig = go.Figure(layout=_base_layout(
+        "Same hidden truth, same noise draws — only the price mechanism differs",
+        "period t", "probability / price",
+    ))
+    fig.add_scatter(x=tt, y=a.q[0], name="hidden truth q_t (identical in both)",
+                    line=dict(color=ORANGE, width=2, dash="dash"))
+    fig.add_scatter(x=tt, y=a.p[0], name="variant A price (iid noise, errors vanish next period)",
+                    line=dict(color=BLUE, width=2))
+    fig.add_scatter(x=tt, y=b.p[0], name="variant B price (kappa=0.2 — errors decay slowly)",
+                    line=dict(color=AQUA, width=2))
+    return fig
+
+
+def fig_jump_story(seed: int = 42) -> go.Figure:
+    """The dip-buying trap under news jumps (extension), on one path.
+
+    Reproduces the dashboard's default demo path: variant B, kappa=0.3,
+    lambda=0.04, jump_scale=0.20, seed 42 — the EMA policy buys a 'dip'
+    that was really a news jump and loses at settlement.
+    """
+    params = replace(BASELINE, kappa=0.3, jump_rate=0.04, jump_scale=0.20)
+    paths = simulate_market_seeded(params, 1, seed)
+    q, p, y = paths.q[0], paths.p[0], int(paths.y[0])
+    pol = EMAThresholdPolicy(alpha=0.3, delta=0.05)
+    profit, trades = run_policy_path(pol, p, y)
+    f = np.empty_like(p)
+    f[0] = p[0]
+    for t in range(1, len(p)):
+        f[t] = 0.3 * p[t] + 0.7 * f[t - 1]
+    tt = np.arange(len(p))
+    fig = go.Figure(layout=_base_layout(
+        f"EXTENSION: a 'dip' that was news — settles {'YES' if y else 'NO'}, "
+        f"EMA policy profit {profit:+.3f} (lambda=0.04, seed {seed})",
+        "period t", "probability / price",
+    ))
+    fig.add_scatter(x=tt, y=q, name="hidden truth q_t",
+                    line=dict(color=ORANGE, width=2, dash="dash"))
+    jt = np.flatnonzero(paths.jumps[0]) + 1
+    if jt.size:
+        fig.add_scatter(x=jt, y=q[jt], mode="markers", name="news jump",
+                        marker=dict(symbol="diamond-open", size=12, color=ORANGE,
+                                    line=dict(width=2)))
+    fig.add_scatter(x=tt, y=p, name="observed price p_t", line=dict(color=BLUE, width=2))
+    fig.add_scatter(x=tt, y=f, name="EMA f_t (alpha=0.3)", line=dict(color=AQUA, width=2))
+    buys = [tr for tr in trades if tr.units > 0]
+    if buys:
+        fig.add_scatter(x=[tr.t for tr in buys], y=[tr.price for tr in buys],
+                        mode="markers", name="buy",
+                        marker=dict(symbol="triangle-up", size=13, color=GREEN,
+                                    line=dict(color=SURFACE, width=2)))
+    fig.add_scatter(x=[len(p) - 1], y=[float(y)], mode="markers", name="settlement",
+                    marker=dict(symbol="star", size=15, color=INK))
+    return fig
+
+
+def fig_jump_sweep(sweep: pd.DataFrame) -> go.Figure:
+    """EXTENSION headline: best-cell edge over buy-and-hold vs news rate."""
+    d = sweep.sort_values("jump_rate")
+    fig = go.Figure(layout=_base_layout(
+        "News intensity erodes the dip-buying edge "
+        f"(variant B, kappa=0.3, jump size {d['jump_scale'].iloc[0]:.2f}, "
+        f"cost {d['cost'].iloc[0]:.2f})",
+        "lambda (news events per period; 0 = approved model)",
+        "best EMA edge over buy-and-hold (per contract, 95% CI)",
+    ))
+    rgba = "rgba(42,120,214,0.15)"
+    fig.add_scatter(x=pd.concat([d["jump_rate"], d["jump_rate"][::-1]]),
+                    y=pd.concat([d["diff_ci_high"], d["diff_ci_low"][::-1]]),
+                    fill="toself", fillcolor=rgba, line=dict(width=0),
+                    showlegend=False, hoverinfo="skip")
+    fig.add_scatter(x=d["jump_rate"], y=d["diff_vs_bh"], name="best EMA edge vs BH",
+                    mode="lines+markers", line=dict(color=BLUE, width=2),
+                    marker=dict(size=9))
+    fig.add_hline(y=0, line=dict(color=MUTED, width=1, dash="dot"))
+    return fig
+
+
+def generate_extension(tables: dict[str, pd.DataFrame]) -> None:
+    """Export the extension figures (news jumps, A-vs-B illustration)."""
+    _save(fig_variant_ab(), "fig_variant_ab.png")
+    _save(fig_jump_story(), "fig_jump_path.png")
+    _save(fig_jump_sweep(tables["sweep_jump_rate"]), "fig_jump_sweep.png")
+
+
 def generate_all(tables: dict[str, pd.DataFrame]) -> None:
     """Export every report figure from the experiment tables."""
     _save(fig_single_path(), "fig_single_path.png")

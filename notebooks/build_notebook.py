@@ -165,7 +165,37 @@ cells.append(code(
 ))
 
 cells.append(md(
-    "## 7. Real-data calibration (scope: inputs only)\n"
+    "## 7. Extension: the full model-case matrix and the news frontier\n"
+    "Clearly-labelled results **beyond the approved model** (which is the "
+    "λ = 0 row/case everywhere): variant A/B × Poisson news jumps on/off, "
+    "then the jump-rate sweep. The approved-model headline results above are "
+    "untouched by these."
+))
+
+cells.append(code(
+    "cases = tables['model_case_matrix']\n"
+    "cases[['case','best_policy','best_mean_profit','bh_mean_profit',\n"
+    "       'diff_vs_bh','diff_ci_low','diff_ci_high','best_beats_bh']]"
+))
+
+cells.append(code(
+    "js = tables['sweep_jump_rate']\n"
+    "js = js.assign(erosion_vs_lambda0=1 - js['diff_vs_bh'] / js['diff_vs_bh'].iloc[0])\n"
+    "js[['jump_rate','best_policy','diff_vs_bh','diff_ci_low','diff_ci_high',\n"
+    "    'erosion_vs_lambda0','any_ema_beats_bh']]"
+))
+
+cells.append(md(
+    "**Reading it:** the edge survives in all four model worlds at λ = 0.05 "
+    "but news is expensive — the paired edge decays roughly linearly in λ "
+    "(−24% at one event per 20 periods, −62% at one per 5). Under variant A "
+    "with jumps the winning cell shifts from slow (α=0.1) to fast (α=0.6) "
+    "smoothing: when the truth can jump, a long-memory EMA compares prices "
+    "against a stale anchor. Mechanism figure: `report/figures/fig_jump_path.png`."
+))
+
+cells.append(md(
+    "## 8. Real-data calibration (scope: inputs only)\n"
     "Bundled Polymarket samples and their implied model parameters — evidence "
     "that the simulator defaults (σ_q ≈ 0.02 per step) are realistic. We do "
     "not fit or backtest on real data."

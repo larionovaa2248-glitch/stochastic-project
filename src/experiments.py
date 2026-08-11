@@ -357,6 +357,106 @@ def headline_interaction_table(
 
 
 # ---------------------------------------------------------------------------
+# EXTENSION experiments (news jumps — beyond the locked Section-3 model).
+# Kept separate from the approved-model suite: everything above this line
+# uses jump_rate = 0 and is untouched by the extension.
+# ---------------------------------------------------------------------------
+
+def _best_cell_row(paths: MarketPaths, cost: float) -> dict:
+    """Best grid policy by paired edge vs buy-and-hold on one batch."""
+    bh = buy_and_hold_profits(paths, cost)
+    best = None
+    any_sig = False
+    for pol in grid_policies():
+        profits = profits_on_paths(paths, pol, cost)
+        d = paired_diff_vs_benchmark(profits, bh)
+        any_sig = any_sig or d["beats_benchmark"]
+        if best is None or d["mean"] > best["diff_vs_bh"]:
+            s = summarize(profits)
+            best = {
+                "best_policy": pol.name,
+                "best_mean_profit": s["mean"],
+                "best_p_loss": s["p_loss"],
+                "bh_mean_profit": float(np.mean(bh)),
+                "diff_vs_bh": d["mean"],
+                "diff_ci_low": d["ci_low"],
+                "diff_ci_high": d["ci_high"],
+                "best_beats_bh": d["beats_benchmark"],
+            }
+    best["any_ema_beats_bh"] = any_sig
+    return best
+
+
+def model_case_matrix(
+    n_reps: int = 20000,
+    seed: int = MASTER_SEED,
+    cost: float = 0.01,
+    jump_rate: float = 0.05,
+    jump_scale: float = 0.20,
+) -> pd.DataFrame:
+    """The four model cases side by side: variant A/B x jumps off/on.
+
+    Same sigma_p, horizon, and cost everywhere, so the only thing changing
+    across rows is the price-adjustment mechanism and whether the hidden
+    truth can jump on news.  Answers 'which model world are we in, and does
+    the EMA edge survive in each?' in one table.
+    """
+    cases = [
+        ("A", 1.0, 0.0, "Variant A · no jumps"),
+        ("B", 0.3, 0.0, "Variant B (kappa=0.3) · no jumps"),
+        ("A", 1.0, jump_rate, "Variant A · jumps"),
+        ("B", 0.3, jump_rate, "Variant B (kappa=0.3) · jumps"),
+    ]
+    rows = []
+    for i, (variant, kappa, lam, label) in enumerate(cases):
+        params = replace(BASELINE, variant=variant, kappa=kappa,
+                         jump_rate=lam, jump_scale=jump_scale)
+        paths = simulate_market_seeded(params, n_reps, seed + 211 + 1000 * i)
+        row = {"case": label, "variant": variant, "kappa": kappa,
+               "jump_rate": lam, "jump_scale": jump_scale if lam > 0 else 0.0,
+               "cost": cost, **_best_cell_row(paths, cost)}
+        rows.append(row)
+    return pd.DataFrame(rows)
+
+
+def sweep_jump_rate(
+    rates=(0.0, 0.02, 0.05, 0.10, 0.20),
+    jump_scale: float = 0.20,
+    cost: float = 0.01,
+    n_reps: int = 20000,
+    seed: int = MASTER_SEED,
+) -> pd.DataFrame:
+    """EXTENSION headline: how news intensity erodes the dip-buying edge.
+
+    Baseline persistent market (variant B, kappa = 0.3) with the Poisson
+    news-jump rate lambda swept from 0 (the approved model) upward.  Each
+    point is an independent seeded batch; policies share paths (CRN).
+    """
+    rows = []
+    for i, lam in enumerate(rates):
+        params = replace(BASELINE, kappa=0.3, jump_rate=lam, jump_scale=jump_scale)
+        paths = simulate_market_seeded(params, n_reps, seed + 307 + 1000 * i)
+        rows.append({"jump_rate": lam, "jump_scale": jump_scale, "cost": cost,
+                     **_best_cell_row(paths, cost)})
+    return pd.DataFrame(rows)
+
+
+def run_extension(n_reps: int = 20000, seed: int = MASTER_SEED, verbose: bool = True) -> dict[str, pd.DataFrame]:
+    """Run the extension experiments and save their CSVs (clearly separated
+    from the approved-model outputs)."""
+    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+    out = {
+        "model_case_matrix": model_case_matrix(n_reps=n_reps, seed=seed),
+        "sweep_jump_rate": sweep_jump_rate(n_reps=n_reps, seed=seed),
+    }
+    for name, df in out.items():
+        df.to_csv(RESULTS_DIR / f"{name}.csv", index=False)
+        if verbose:
+            print(f"[experiments] wrote results/{name}.csv ({len(df)} rows, EXTENSION)")
+    return out
+
+
+# ---------------------------------------------------------------------------
 # End-to-end driver: python -m src.experiments
 # ---------------------------------------------------------------------------
 
@@ -408,4 +508,6 @@ if __name__ == "__main__":
 
     tables = run_all()
     figures.generate_all(tables)
+    ext = run_extension()
+    figures.generate_extension(ext)
     print("[experiments] done — CSVs in results/, figures in report/figures/")

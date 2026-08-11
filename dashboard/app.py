@@ -485,9 +485,16 @@ noise creates it.
 adds rare, large, zero-mean shocks to the hidden truth, arriving as a Poisson
 process (Bernoulli per period, geometric interarrivals — the discrete
 analogue of exponential ones). This goes *beyond* the professor-approved
-model, so it ships off by default and every reported result uses the
-approved model; with it on, watch the Policy Lab — dip-buying starts
-catching real bad news instead of noise, and the EMA edge shrinks.
+model, so it ships off by default and every headline result uses the
+approved model. We then quantified it (results/model\_case\_matrix.csv and
+results/sweep\_jump\_rate.csv, seed 20260812): across **all four model
+cases** — variant A/B × jumps off/on — the EMA edge stays CI-significant,
+but news is expensive: at λ = 0.05 the edge drops ≈ 24%, at λ = 0.20 it
+drops ≈ 62%, decaying roughly linearly, because the rule buys downward
+repricings it cannot distinguish from noise and cannot buy the upward ones.
+Under variant A with jumps the winning cell shifts from slow (α=0.1) to fast
+(α=0.6) smoothing — when the world can jump, long memory becomes a stale
+anchor. Try it live: toggle jumps on and watch the Policy Lab verdict.
 
 **Scope guard.** Real Polymarket data only *sets inputs* (q₀ and volatilities,
 estimated by method of moments). We do **not** fit the model to real data or
@@ -495,13 +502,49 @@ backtest policies on real series — that is out of scope by design.
 
 **Reproducibility.** Every simulation takes an explicit seed
 (`numpy.random.Generator`); the same seed always reproduces the same paths,
-trades, and CIs. The engine passes a 31-test validation suite (zero-noise
+trades, and CIs. The engine passes a 37-test validation suite (zero-noise
 limit, martingale property, settlement calibration, no-lookahead, seed
 reproducibility — Section 7).
 
 **Team:** _add team member names here before the presentation._
         """
     )
+
+    with st.expander("📚 Every control, explained (open during Q&A)"):
+        st.markdown(
+            r"""
+**Market setup**
+
+| Control | What it does | Intuition |
+|---|---|---|
+| Starting probability q₀ | Where the hidden truth begins at t=0 — also the fair price of the contract on day one. | A 0.40 contract "should" cost \$0.40. |
+| Horizon T | Number of periods until settlement. | Longer horizons let the truth wander further and give policies more chances to act. |
+| Hidden volatility σ_q | Step size of the truth's random walk, per period (damped by √(q(1−q)) near 0/1). | How fast the world actually changes. Real Polymarket estimates: 0.002–0.019/step. |
+| Observation noise σ_p | Standard deviation of the price's error around the truth, each period. | How wrong the market is allowed to be. **This is what creates the trading edge.** |
+| Price variant A/B | A: errors are fresh each period and vanish next period. B: the price only closes a fraction κ of its gap to the truth per period, so errors persist. | A = instantly self-correcting market; B = sluggish market. |
+| Persistence κ | Variant B's adjustment speed. κ=1 reproduces variant A exactly; κ=0.05 means a mispricing takes ~20 periods to fade. | Smaller κ = stickier mispricings. The edge peaks at κ≈0.2–0.3. |
+| 🗞️ News jumps (λ, size) | Extension, default off: with probability λ each period the truth takes an extra zero-mean shock of the given size. | Rare big news. Zero-mean ⇒ settlement calibration still holds; λ=0 is bit-for-bit the approved model. |
+
+**Trading policy**
+
+| Control | What it does | Intuition |
+|---|---|---|
+| Smoothing α | EMA weight on today's price: f = α·p + (1−α)·f. | Small α = long memory / slow estimate; α=1 makes f ≡ p (never trades). |
+| Entry threshold δ | Buy 1 unit when f − p > δ; hold to settlement. | How big a dip counts as mispricing, not wiggle. δ=0.10 ≈ act only on ~2σ dips at σ_p=0.05. |
+| Exit when rich | Optionally also sell when p − f > δ (re-entry allowed). | Off in all reported results — the spec's pure buy-and-hold-to-settlement family. |
+| Per-trade cost c | Fee per unit each time you trade. | Hits EMA and buy-and-hold nearly equally (both trade ≤ once), so the *edge* barely moves. |
+| Position size | Units per trade. | Scales all P&L linearly — shapes, CIs, and verdicts are unchanged. |
+
+**Simulation**
+
+| Control | What it does | Intuition |
+|---|---|---|
+| Replications | How many independent contracts stand behind every statistic. | More reps = tighter CIs (half-width ∝ 1/√n). Default 2,000 keeps every interaction <2s. |
+| Seed | Fixes every random draw. | Same seed ⇒ identical paths, trades, and CIs — the demo is repeatable. |
+| Run-length control + tolerance | Doubles the replication count until the 95% CI half-width falls below tolerance (Lecture 3). | "How many runs do I actually need?" — answered automatically in Policy Lab. |
+| Load a real market | Paste a polymarket.com URL (live) or pick a bundled sample (offline); prefill maps the series onto q₀/σ_q/σ_p by method of moments. | Grounds the dials in reality. Inputs only — never fitting or backtesting. |
+"""
+        )
 
     st.divider()
     st.markdown("**Rubric mapping** — problem formulation: Sections 1–3 of "

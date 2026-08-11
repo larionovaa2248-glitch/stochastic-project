@@ -72,7 +72,29 @@ Doubling schedule: 1,000 → 0.0307; 2,000 → 0.0215; 4,000 → 0.0152;
 8,000 → 0.0108; 16,000 → 0.0076; 32,000 → 0.0054; **64,000 → 0.0038 ✓**
 (final estimate +0.0571 ± 0.0038). `run_length_control.csv`.
 
-## Validation (Section 7) — all 31 tests green
+## Extension results — news jumps (all four model cases; seed 20260812)
+
+Clearly-labelled extension beyond the approved model (`model_case_matrix.csv`,
+`sweep_jump_rate.csv`); headline results above remain approved-model only.
+
+Model case matrix (sigma_p = 0.05, cost 0.01, jumps: lambda = 0.05, scale 0.20):
+
+| Case | Best cell | Paired edge vs BH (95% CI) |
+|---|---|---|
+| Variant A · no jumps | EMA(0.1, 0.10) | +0.0938 [+0.0913, +0.0964] |
+| Variant B (kappa=0.3) · no jumps | EMA(0.1, 0.10) | +0.1024 [+0.1008, +0.1040] |
+| Variant A · jumps | EMA(0.6, 0.05) | +0.0757 [+0.0731, +0.0783] |
+| Variant B (kappa=0.3) · jumps | EMA(0.1, 0.10) | +0.0778 [+0.0758, +0.0798] |
+
+Jump-rate sweep (variant B, kappa = 0.3, scale 0.20, cost 0.01): edge decays
+monotonically and roughly linearly in lambda — +0.1029 (lambda 0) → +0.0928
+(0.02, −10%) → +0.0786 (0.05, −24%) → +0.0643 (0.10, −37%) → +0.0387
+(0.20, −62%) — CI-significant throughout this range. Mechanism: the rule buys
+downward repricings it cannot distinguish from noise and cannot buy upward
+ones (rising prices sit above their EMA). Under variant A with jumps the
+winning cell shifts from slow (alpha=0.1) to fast (alpha=0.6) smoothing.
+
+## Validation (Section 7) — all 37 tests green
 
 - Zero noise: price = hidden probability exactly; EMA(1, 0) never trades;
   all grid policies' expected profits equal buy-and-hold's (paired CIs).
@@ -82,7 +104,11 @@ Doubling schedule: 1,000 → 0.0307; 2,000 → 0.0215; 4,000 → 0.0152;
   q0 ∈ {0.10, 0.25, 0.50, 0.75, 0.90}.
 - No-lookahead: future-price shocks cannot change pre-shock trades through
   the real evaluation harness (probe-policy canary); past shocks do.
-- Seed reproducibility: identical batches from identical seeds.
+- Seed reproducibility: identical batches from identical seeds, plus a
+  golden-value test pinning the exact random stream of the approved model.
+- Jump extension: arrivals fire at the Poisson rate; martingale/settlement
+  calibration hold with jumps on; lambda=0 is bit-identical to the approved
+  model.
 
 ## Real-data calibration (inputs only — no fitting/backtesting)
 

@@ -362,7 +362,7 @@
     <li>Zero-mean jumps <strong>preserve the martingale</strong> — every validation check still passes with jumps on</li>
     <li>λ = 0 consumes <strong>zero extra random numbers</strong> — approved-model results are bit-for-bit unchanged (golden test)</li>
     <li><strong>First path we looked at</strong> (seed 42): truth jumps down on news → lagging price triggers the dip signal → policy buys real bad news at $0.40 → contract settles NO → <strong>−$0.399</strong></li>
-    <li>Future study: sweep λ to find where the EMA edge crosses zero — the point where a dip is more likely news than noise</li>
+    <li><strong>Quantified across all four model cases</strong> (A/B × jumps on/off): edge stays significant but decays ~linearly in λ — <strong>−24%</strong> at one event per 20 periods, <strong>−62%</strong> at one per 5 — and under A+jumps the winner flips to <em>fast</em> smoothing: long memory becomes a stale anchor</li>
   </ul>
   <div class="notes"><h4>Speaker notes</h4><p>This is the "we know our model's boundary" slide. The seed-42 story is reproducible live in the demo if asked — toggle news jumps in the sidebar.</p></div>
 </section>
