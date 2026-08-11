@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trading Against Noise — SHBI-GB.7301 Final Presentation</title>
+<style>
+  :root {
+    --bg: #12120f; --surface: #1a1a19; --card: #fcfcfb;
+    --ink: #f5f4ef; --ink2: #c3c2b7; --muted: #898781;
+    --blue: #3987e5; --orange: #d95926; --aqua: #199e70;
+    --red: #e66767; --hair: #383835;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; background: var(--bg); color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif; overflow: hidden; }
+  .deck { height: 100%; position: relative; }
+  .slide { position: absolute; inset: 0; display: none; flex-direction: column;
+    justify-content: center; padding: 4.5vh 7vw 9vh; }
+  .slide.active { display: flex; }
+  .kicker { font-size: clamp(12px, 1.4vw, 16px); letter-spacing: .18em;
+    text-transform: uppercase; color: var(--muted); margin-bottom: 1.2vh; }
+  h1 { font-size: clamp(34px, 5.4vw, 72px); line-height: 1.05; letter-spacing: -0.02em; }
+  h2 { font-size: clamp(24px, 3.4vw, 44px); line-height: 1.12; letter-spacing: -0.015em;
+    margin-bottom: 2.6vh; }
+  h2 .hl { color: var(--blue); }
+  p, li { font-size: clamp(15px, 1.75vw, 22px); line-height: 1.5; color: var(--ink2); }
+  p + p { margin-top: 1.4vh; }
+  strong { color: var(--ink); font-weight: 650; }
+  ul { list-style: none; }
+  li { padding-left: 1.2em; position: relative; margin-bottom: 1.4vh; }
+  li::before { content: "—"; position: absolute; left: 0; color: var(--blue); }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 3.5vw; align-items: center; }
+  .cols-31 { grid-template-columns: 1.35fr 1fr; }
+  .formula { font-family: "SF Mono", ui-monospace, Menlo, monospace;
+    font-size: clamp(14px, 1.7vw, 21px); color: var(--ink); background: var(--surface);
+    border: 1px solid var(--hair); border-left: 3px solid var(--blue);
+    border-radius: 10px; padding: 2vh 1.6vw; margin: 1.8vh 0; overflow-x: auto;
+    white-space: nowrap; }
+  .formula .c { color: var(--muted); }
+  .formula.orange { border-left-color: var(--orange); }
+  .formula.aqua { border-left-color: var(--aqua); }
+  .fig { background: var(--card); border-radius: 14px; padding: 0.8vh 0.5vw;
+    box-shadow: 0 12px 40px rgba(0,0,0,.45); }
+  .fig img { width: 100%; height: auto; display: block; border-radius: 10px; }
+  .figcap { text-align: center; color: var(--muted); font-size: clamp(11px, 1.2vw, 15px);
+    margin-top: 1vh; }
+  .stat { display: flex; gap: 3.5vw; margin-top: 3vh; flex-wrap: wrap; }
+  .stat div { border-top: 2px solid var(--hair); padding-top: 1.2vh; min-width: 9vw; }
+  .stat .n { font-size: clamp(26px, 3.6vw, 52px); font-weight: 700; color: var(--ink);
+    font-variant-numeric: tabular-nums; }
+  .stat .n.blue { color: var(--blue); } .stat .n.orange { color: var(--orange); }
+  .stat .n.aqua { color: var(--aqua); } .stat .n.red { color: var(--red); }
+  .stat .l { font-size: clamp(11px, 1.25vw, 15px); color: var(--muted);
+    text-transform: uppercase; letter-spacing: .08em; margin-top: .5vh; }
+  table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+  th, td { font-size: clamp(13px, 1.5vw, 19px); padding: 1.1vh 1vw; text-align: right;
+    border-bottom: 1px solid var(--hair); color: var(--ink2); }
+  th { color: var(--muted); font-weight: 600; text-transform: uppercase;
+    font-size: clamp(10px, 1.1vw, 14px); letter-spacing: .06em; }
+  td:first-child, th:first-child { text-align: left; }
+  td.win { color: var(--ink); font-weight: 650; }
+  .badge { display: inline-block; background: var(--surface); border: 1px solid var(--hair);
+    color: var(--ink2); border-radius: 999px; padding: .5vh 1.2vw;
+    font-size: clamp(11px, 1.3vw, 15px); margin: 0 .6vw .8vh 0; }
+  .demo-btn { display: inline-block; margin-top: 3.5vh; background: var(--blue);
+    color: #fff; text-decoration: none; font-size: clamp(18px, 2.4vw, 30px);
+    font-weight: 650; padding: 2vh 3vw; border-radius: 14px;
+    box-shadow: 0 10px 34px rgba(57,135,229,.35); }
+  .demo-btn:hover { filter: brightness(1.1); }
+  .note-hint { color: var(--muted); font-size: clamp(11px, 1.2vw, 14px); margin-top: 2vh; }
+  /* chrome */
+  .hud { position: fixed; bottom: 2.2vh; left: 0; right: 0; display: flex;
+    justify-content: space-between; padding: 0 7vw; color: var(--muted);
+    font-size: clamp(11px, 1.2vw, 14px); pointer-events: none; z-index: 5; }
+  .bar { position: fixed; bottom: 0; left: 0; height: 3px; background: var(--blue);
+    width: 0; transition: width .25s ease; z-index: 6; }
+  .notes { position: fixed; inset: auto 0 0 0; max-height: 38vh; overflow-y: auto;
+    background: rgba(18,18,15,.96); border-top: 1px solid var(--hair);
+    padding: 2vh 7vw 6vh; display: none; z-index: 4; }
+  .notes.show { display: block; }
+  .notes h4 { color: var(--orange); text-transform: uppercase; letter-spacing: .1em;
+    font-size: 12px; margin-bottom: 1vh; }
+  .notes p { font-size: clamp(13px, 1.4vw, 17px); }
+  @media print {
+    html, body { overflow: visible; background: #fff; }
+    .slide { position: relative; display: flex !important; page-break-after: always;
+      min-height: 100vh; }
+    .hud, .bar, .notes { display: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="deck" id="deck">
+
+<!-- 1 ─ Title -->
+<section class="slide">
+  <div class="kicker">SHBI-GB.7301 · Stochastic Modeling &amp; Simulation · NYU Summer 2026</div>
+  <h1>Trading Against Noise</h1>
+  <p style="font-size:clamp(18px,2.4vw,30px); margin-top:2vh; color:var(--ink2)">
+    A simulation study of trading policies in prediction markets</p>
+  <div class="stat">
+    <div><div class="n blue">3</div><div class="l">model layers</div></div>
+    <div><div class="n aqua">37</div><div class="l">validation tests</div></div>
+    <div><div class="n orange">20,000</div><div class="l">replications / point</div></div>
+    <div><div class="n">1</div><div class="l">master seed</div></div>
+  </div>
+  <p class="note-hint" style="margin-top:5vh">Team: Anastasia Larionova [+ teammates] ·
+    github.com/larionovaa2248-glitch/stochastic-project</p>
+  <div class="notes"><h4>Speaker notes</h4><p>Welcome. 20 minutes: the model, why you can trust it, what it found, live demo. Navigate with arrow keys; press N to toggle these notes.</p></div>
+</section>
+
+<!-- 2 ─ Hook -->
+<section class="slide">
+  <div class="kicker">The question</div>
+  <h2>A contract on “Will X happen?” trades at <span class="hl">40¢</span>
+    and pays <span class="hl">$1</span> if X happens.<br>Can a simple rule beat just buying it?</h2>
+  <ul>
+    <li>The price <strong>is</strong> the market's probability forecast — but it carries noise:
+      thin order books, sentiment, slow reactions.</li>
+    <li>If dips below "fair value" are usually noise, <strong>buying dips</strong> should profit.</li>
+    <li>If the market is basically right, <strong>nothing</strong> beats buy-and-hold.</li>
+    <li>Which world are we in — and what does the answer depend on?</li>
+  </ul>
+  <div class="notes"><h4>Speaker notes</h4><p>Frame as a bet between two worldviews: exploitable noise vs. efficient markets. Our contribution is measuring precisely when each wins — inside a controlled simulation.</p></div>
+</section>
+
+<!-- 3 ─ Why simulation -->
+<section class="slide">
+  <div class="kicker">Why simulate instead of backtest?</div>
+  <h2>In a simulation, <span class="hl">we control the truth</span></h2>
+  <div class="cols">
+    <ul>
+      <li>Real data never reveals the true probability — a backtest can't separate skill from luck.</li>
+      <li>We build a world where the truth <strong>exists but is hidden</strong> from the trader.</li>
+      <li>We tune <strong>exactly how wrong</strong> prices may be — then measure policy profit against known truth.</li>
+      <li>Tens of thousands of independent replications → real confidence intervals.</li>
+    </ul>
+    <ul>
+      <li><strong>Every number is seeded.</strong> One master seed (20260812) regenerates every table and figure.</li>
+      <li>Real Polymarket data is used only to <strong>set realistic inputs</strong> — never fitted, never backtested.</li>
+    </ul>
+  </div>
+  <div class="notes"><h4>Speaker notes</h4><p>This is the methodological pitch: simulation buys ground truth and replication. Mention the scope guard explicitly — professor cares.</p></div>
+</section>
+
+<!-- 4 ─ Model overview -->
+<section class="slide">
+  <div class="kicker">The model · professor-approved structure</div>
+  <h2>Three layers, simulated in order each period</h2>
+  <div class="cols cols-31">
+    <div>
+      <div class="formula orange">1 · Hidden truth&nbsp;&nbsp;<span class="c">q_t — a bounded random walk the trader NEVER sees</span></div>
+      <div class="formula">2 · Observed price&nbsp;&nbsp;<span class="c">p_t = truth + noise (two variants)</span></div>
+      <div class="formula aqua">3 · Settlement&nbsp;&nbsp;<span class="c">pays $1 with prob q_T, else $0</span></div>
+      <p>Profit per unit = payout − entry price − cost. A policy can profit
+        <strong>only by buying below true value</strong>.</p>
+    </div>
+    <div>
+      <div class="fig"><img src="assets/fig_single_path.png" alt="One simulated contract"></div>
+      <div class="figcap">One contract: dashed = hidden truth, blue = price, green = EMA, ▲ = buy</div>
+    </div>
+  </div>
+  <div class="notes"><h4>Speaker notes</h4><p>Walk the figure: price rattles around slow truth; EMA smooths; policy bought the dip; star = settlement. Emphasize the trader's information set is only the blue line.</p></div>
+</section>
+
+<!-- 5 ─ Layer 1 -->
+<section class="slide">
+  <div class="kicker">Layer 1 · the hidden truth</div>
+  <h2>A martingale that <span class="hl">stays a probability</span></h2>
+  <div class="formula orange">q<sub>t+1</sub> = clip( q<sub>t</sub> + σ<sub>q</sub> · √(q<sub>t</sub>(1−q<sub>t</sub>)) · Z<sub>t</sub> ,&nbsp; ε, 1−ε )&nbsp;&nbsp;&nbsp;<span class="c">Z<sub>t</sub> ~ N(0,1) iid, ε = 0.001</span></div>
+  <ul>
+    <li><strong>Zero-mean shocks ⇒ E[q<sub>t+1</sub> | q<sub>t</sub>] = q<sub>t</sub>.</strong> Today's truth is the best forecast of tomorrow's — and it gives us testable implications.</li>
+    <li><strong>√(q(1−q)) damping:</strong> Bernoulli-variance structure — probabilities near 0 or 1 move less, so the walk stays in (0,1) naturally, not via the clip.</li>
+    <li><strong>Markov:</strong> tomorrow depends only on today. Simplest defensible information structure.</li>
+  </ul>
+  <div class="notes"><h4>Speaker notes</h4><p>The martingale property is doing double duty: it's economically sensible AND it's the basis of two validation tests (mean q_T = q0; settlement frequency = q0).</p></div>
+</section>
+
+<!-- 6 ─ Layer 2 -->
+<section class="slide">
+  <div class="kicker">Layer 2 · the observed price</div>
+  <h2>One dial for market efficiency: <span class="hl">κ</span></h2>
+  <div class="formula">A (iid noise):&nbsp;&nbsp;p<sub>t</sub> = clip( q<sub>t</sub> + η<sub>t</sub> )&nbsp;&nbsp;&nbsp;<span class="c">η<sub>t</sub> ~ N(0, σ<sub>p</sub>²) — errors vanish next period</span></div>
+  <div class="formula">B (partial adj.):&nbsp;&nbsp;p<sub>t</sub> = clip( p<sub>t−1</sub> + κ(q<sub>t</sub> − p<sub>t−1</sub>) + η<sub>t</sub> )&nbsp;&nbsp;&nbsp;<span class="c">gap closes at rate κ</span></div>
+  <ul>
+    <li>Variant B: a shock decays geometrically — a cheap contract <strong>stays cheap for ~1/κ periods</strong>.</li>
+    <li>κ = 1 collapses B into A <strong>exactly</strong>, path-for-path (enforced by a test) — so κ is a continuous dial from "instant repricing" to "very sticky".</li>
+    <li>σ<sub>p</sub> sets how <em>much</em> error; κ sets how <em>long</em> it lives.</li>
+  </ul>
+  <div class="notes"><h4>Speaker notes</h4><p>These two dials — noise size and noise lifetime — are the axes of the whole study. Keep them separate in the audience's head now; the punchline depends on it.</p></div>
+</section>
+
+<!-- 7 ─ Policies -->
+<section class="slide">
+  <div class="kicker">The trading policies</div>
+  <h2>Smooth the price, <span class="hl">buy the dip</span>, hold to settlement</h2>
+  <div class="formula aqua">f<sub>t</sub> = α·p<sub>t</sub> + (1−α)·f<sub>t−1</sub>&nbsp;&nbsp;&nbsp;buy 1 unit when&nbsp; f<sub>t</sub> − p<sub>t</sub> &gt; δ</div>
+  <div class="cols">
+    <ul>
+      <li><strong>α</strong> = memory of the fair-value estimate (small α = long memory)</li>
+      <li><strong>δ</strong> = how big a dip counts as mispricing, not wiggle</li>
+      <li>Full grid: α ∈ {0.1, 0.3, 0.6} × δ ∈ {0.02, 0.05, 0.10} — nine policies</li>
+    </ul>
+    <ul>
+      <li><strong>Benchmarks:</strong> buy-and-hold (the "market is right" position) and never-trade (profit ≡ 0)</li>
+      <li><strong>No lookahead, structurally:</strong> decide(price_history) receives a copy of p₀…p<sub>t</sub> — <em>nothing else exists in its world</em></li>
+    </ul>
+  </div>
+  <div class="notes"><h4>Speaker notes</h4><p>Stress that policies are deliberately mechanical — no learning, no optimization on the fly. The question is whether even a naive rule finds the noise.</p></div>
+</section>
+
+<!-- 8 ─ Validation -->
+<section class="slide">
+  <div class="kicker">Why trust the numbers · 30% of the rubric</div>
+  <h2><span class="hl">37 tests</span> gate every change</h2>
+  <ul>
+    <li><strong>Zero-noise limit:</strong> σ<sub>p</sub>=0 ⇒ price ≡ truth, degenerate EMA never trades, all policies ≈ buy-and-hold (optional stopping on a martingale)</li>
+    <li><strong>Martingale:</strong> mean q<sub>T</sub> = 0.3996 vs q₀ = 0.40 (SE 0.0005) · settlement frequency 0.4030 (SE 0.0035)</li>
+    <li><strong>Calibration:</strong> contracts started at x settle YES ≈ x of the time, for x ∈ {0.10 … 0.90}</li>
+    <li><strong>No lookahead:</strong> shock all prices after t=40 → every pre-shock trade is bit-identical, even for a "future-hungry" probe policy built to exploit any leak</li>
+    <li><strong>Seed reproducibility:</strong> golden-value test pins the exact random stream</li>
+  </ul>
+  <p style="margin-top:1.5vh"><strong>Adversarial review caught a real bug:</strong> our first lookahead test never actually showed the policy the shocked prices — it could not fail. Rebuilt through the real harness. Full log in the repo.</p>
+  <div class="notes"><h4>Speaker notes</h4><p>The bug story is a feature, not an embarrassment: it shows the review process worked and the surviving test has actual detection power. PROJECT.md calls lookahead "the one bug that would invalidate the whole analysis."</p></div>
+</section>
+
+<!-- 9 ─ Experiment design -->
+<section class="slide">
+  <div class="kicker">Experiment design</div>
+  <h2>Every claim carries a <span class="hl">95% CI</span></h2>
+  <div class="cols cols-31">
+    <ul>
+      <li><strong>Per policy:</strong> E[profit], P(loss), E[loss | loss], CLT interval mean ± 1.96·s/√n</li>
+      <li><strong>Common random numbers:</strong> all 11 policies score the same simulated paths; "beats buy-and-hold" always means the <em>paired-difference</em> CI clears zero</li>
+      <li><strong>Run-length control:</strong> double n until the CI half-width meets tolerance — ±0.005 needed n = 64,000</li>
+      <li><strong>Sweeps:</strong> σ<sub>p</sub> × κ × cost around a data-calibrated baseline</li>
+    </ul>
+    <div>
+      <div class="fig"><img src="assets/fig_run_length.png" alt="Run-length control"></div>
+      <div class="figcap">Half-width falls as 1/√n until tolerance binds</div>
+    </div>
+  </div>
+  <div class="notes"><h4>Speaker notes</h4><p>CRN is the technical flex: paired differences cut comparison variance ~10x, which is why our "beats BH" CIs are so tight (±0.0015 vs ±0.007 marginal).</p></div>
+</section>
+
+<!-- 10 ─ Baseline results -->
+<section class="slide">
+  <div class="kicker">Results · baseline market (kappa 0.3 · noise 0.05)</div>
+  <h2>Eight of nine cells <span class="hl">beat buy-and-hold</span></h2>
+  <div class="cols">
+    <div>
+      <div class="fig"><img src="assets/fig_grid_profit.png" alt="Policy grid heatmap"></div>
+      <div class="figcap">E[profit] per $1 contract · outlined = winner, CI-significant</div>
+    </div>
+    <div>
+      <table>
+        <tr><th>Policy</th><th>E[profit]</th><th>P(loss)</th></tr>
+        <tr><td class="win">EMA(0.1, 0.10) ★</td><td class="win">+0.1015</td><td>58.8%</td></tr>
+        <tr><td>EMA(0.3, 0.10)</td><td>+0.0629</td><td>31.5%</td></tr>
+        <tr><td>EMA(0.3, 0.05)</td><td>+0.0614</td><td>60.2%</td></tr>
+        <tr><td>Buy-and-hold</td><td>−0.0019</td><td>60.2%</td></tr>
+        <tr><td>Never-trade</td><td>0</td><td>0%</td></tr>
+      </table>
+      <p style="margin-top:2vh">Winner = <strong>patience in both dials</strong>: long memory (α=0.1)
+        + only act on ~2σ dips (δ=0.10). Paired edge <strong>+0.1034</strong>, CI [+0.1020, +0.1049].</p>
+    </div>
+  </div>
+  <div class="notes"><h4>Speaker notes</h4><p>Note buy-and-hold ≈ 0 by construction (martingale + mean-zero noise at entry). Also note the corner cell (0.6, 0.10) almost never trades — the two dials interact.</p></div>
+</section>
+
+<!-- 11 ─ Headline -->
+<section class="slide">
+  <div class="kicker">Headline experiment</div>
+  <h2>How much persistence does the edge need? <span class="hl">None.</span></h2>
+  <div class="cols cols-31">
+    <div>
+      <div class="fig"><img src="assets/fig_headline_kappa.png" alt="Edge vs kappa"></div>
+      <div class="figcap">Best-cell edge over buy-and-hold vs κ · three cost levels · 95% CI bands</div>
+    </div>
+    <div>
+      <ul>
+        <li>Significant at <strong>every κ ∈ [0.05, 1]</strong>, every cost ≤ 2¢</li>
+        <li>Peak at <strong>κ ≈ 0.2–0.3</strong>: +0.1023 [+0.1007, +0.1038]</li>
+        <li>Worst case (κ=1, 2¢ fees): still <strong>+0.0939</strong> [+0.0913, +0.0965]</li>
+        <li>Interior optimum: dips must <em>persist long enough to catch</em> but <em>correct before settlement</em></li>
+      </ul>
+    </div>
+  </div>
+  <div class="notes"><h4>Speaker notes</h4><p>We expected a threshold ("κ below which it works"). The model said: wrong intuition. Explain both flanks of the peak. Costs barely matter because both strategies trade ≤ once.</p></div>
+</section>
+
+<!-- 12 ─ The twist -->
+<section class="slide">
+  <div class="kicker">The deeper finding</div>
+  <h2><span class="hl">Noise creates the edge.</span> Persistence only shapes it.</h2>
+  <div class="cols">
+    <div>
+      <div class="fig"><img src="assets/fig_headline_interaction.png" alt="kappa x sigma_p interaction"></div>
+      <div class="figcap">All 28 (κ, σ_p) cells CI-significant at 1¢ cost</div>
+    </div>
+    <div>
+      <table>
+        <tr><th>σ_p</th><th>Best edge vs BH</th><th>Significant?</th></tr>
+        <tr><td>0.00</td><td>+0.0027</td><td style="color:var(--red)">no</td></tr>
+        <tr><td>0.02</td><td>+0.0331</td><td>yes</td></tr>
+        <tr><td>0.05</td><td>+0.0913</td><td>yes</td></tr>
+        <tr><td>0.08</td><td>+0.1385</td><td>yes</td></tr>
+        <tr><td>0.12</td><td>+0.2061</td><td>yes</td></tr>
+      </table>
+      <p style="margin-top:2vh">Read by rows: the edge <strong>scales with noise</strong> everywhere.
+        At σ_p = 0 it vanishes — <strong>exactly</strong>. Dip-buying is a bet that dips are noise;
+        in this model, by construction, they are.</p>
+    </div>
+  </div>
+  <div class="notes"><h4>Speaker notes</h4><p>This is the thesis slide. It also tells us where the result must break: when dips can be NEWS. Segue to the extension.</p></div>
+</section>
+
+<!-- 13 ─ Risk -->
+<section class="slide">
+  <div class="kicker">Risk profile</div>
+  <h2>The rule doesn't lose <span class="hl">less often</span> — it loses <span class="hl">less</span></h2>
+  <div class="cols cols-31">
+    <div>
+      <div class="fig"><img src="assets/fig_profit_distribution.png" alt="Profit distributions"></div>
+      <div class="figcap">Binary settlement ⇒ bimodal profits (κ = 0.2, 1¢ cost)</div>
+    </div>
+    <ul>
+      <li>Winner's P(loss): <strong>58.8%</strong> — it loses more often than not, yet is strongly profitable</li>
+      <li>Buying cheap cuts both ways: <strong>smaller losses</strong> (−$0.29 vs −$0.40 given loss) and <strong>bigger wins</strong></li>
+      <li>Third spike at exactly $0: paths where the signal never fired</li>
+    </ul>
+  </div>
+  <div class="notes"><h4>Speaker notes</h4><p>Good place for the "expected value isn't the whole story" caveat — a real trader cares about the distribution, and settlement risk dominates path risk here.</p></div>
+</section>
+
+<!-- 14 ─ Real data -->
+<section class="slide">
+  <div class="kicker">Grounding in reality</div>
+  <h2>Real Polymarket data <span class="hl">sets the inputs</span> — nothing more</h2>
+  <div class="cols">
+    <ul>
+      <li>Live fetch from Polymarket's public APIs (Gamma + CLOB); paste any market URL into the dashboard</li>
+      <li><strong>Method of moments:</strong> Δp is MA(1) under variant A ⇒ lag-1 autocovariance identifies σ<sub>p</sub>, residual variance (with √(q(1−q)) deflation) identifies σ<sub>q</sub></li>
+      <li>Five diverse markets committed as offline samples (418–743 hourly points each) — the demo works with no internet</li>
+    </ul>
+    <ul>
+      <li>Implied σ<sub>q</sub>: <strong>0.002 – 0.019 per step</strong> ⇒ our default 0.02 is the realistic-but-volatile end</li>
+      <li>Estimator validated on simulated data with known parameters</li>
+      <li><strong>Scope guard:</strong> no fitting, no backtesting on real data — no claim here is a claim about realized Polymarket profits</li>
+    </ul>
+  </div>
+  <div class="notes"><h4>Speaker notes</h4><p>Anticipate the obvious question ("so can I make money on Polymarket?") with the scope guard. The model assumes all mispricing is noise; reality mixes noise with news.</p></div>
+</section>
+
+<!-- 15 ─ Extension -->
+<section class="slide">
+  <div class="kicker">Extension · beyond the approved model · default OFF</div>
+  <h2>Poisson <span class="hl">news jumps</span> — where dip-buying should break</h2>
+  <div class="formula orange">with prob λ each period:&nbsp; q gets an extra zero-mean N(0, σ<sub>J</sub>²) shock&nbsp;&nbsp;<span class="c">Bernoulli-per-period = discrete-time Poisson arrivals</span></div>
+  <ul>
+    <li>Zero-mean jumps <strong>preserve the martingale</strong> — every validation check still passes with jumps on</li>
+    <li>λ = 0 consumes <strong>zero extra random numbers</strong> — approved-model results are bit-for-bit unchanged (golden test)</li>
+    <li><strong>First path we looked at</strong> (seed 42): truth jumps down on news → lagging price triggers the dip signal → policy buys real bad news at $0.40 → contract settles NO → <strong>−$0.399</strong></li>
+    <li>Future study: sweep λ to find where the EMA edge crosses zero — the point where a dip is more likely news than noise</li>
+  </ul>
+  <div class="notes"><h4>Speaker notes</h4><p>This is the "we know our model's boundary" slide. The seed-42 story is reproducible live in the demo if asked — toggle news jumps in the sidebar.</p></div>
+</section>
+
+<!-- 16 ─ Demo -->
+<section class="slide" style="align-items:center; text-align:center">
+  <div class="kicker">Live demo</div>
+  <h2 style="font-size:clamp(30px,4.5vw,58px)">Let's break the market together</h2>
+  <p>Single Path Explorer → Policy Lab verdict flips as δ moves → load a real market → news jumps on</p>
+  <a class="demo-btn" href="http://localhost:8601" target="_blank" rel="noopener">Open the dashboard →</a>
+  <p class="note-hint">Requires the local server:&nbsp; <code>streamlit run dashboard/app.py</code>
+    &nbsp;·&nbsp; fully offline-capable (bundled sample markets)</p>
+  <div class="notes"><h4>Speaker notes</h4><p>Demo script (~5 min): 1) Resimulate a few paths — point out the hidden truth. 2) Policy Lab: drag δ from 0.05 to 0.15, watch significance verdict flip. 3) Paste a Polymarket URL, prefill, rerun. 4) Toggle news jumps, resimulate until a jump path shows the dip-buying trap. Fallback: bundled samples if venue Wi-Fi dies.</p></div>
+</section>
+
+<!-- 17 ─ Conclusions -->
+<section class="slide">
+  <div class="kicker">Conclusions</div>
+  <h2>Count the <span class="hl">noise</span>, not the stickiness</h2>
+  <ul>
+    <li>A naive EMA dip-buying rule beats buy-and-hold by <strong>+$0.10 per $1 contract</strong> at the baseline — CI-significant across the entire persistence range, surviving 2¢ costs</li>
+    <li>The expected "persistence threshold" doesn't exist; instead the edge peaks at moderate κ and is <strong>created by observation noise</strong> — vanishing exactly at σ<sub>p</sub> = 0</li>
+    <li>Trust chain: 37 tests · adversarial review · common random numbers · one master seed</li>
+    <li><strong>Future:</strong> jump-intensity sweep to find where dip-buying breaks · exit rules &amp; position sizing · bid-ask spreads and price impact · correlated multi-market portfolios</li>
+  </ul>
+  <p style="margin-top:3vh"><strong>The takeaway we'd offer:</strong> the best output of a simulation study is the mechanism it forces you to articulate. We asked "how much persistence does a trader need?" — the model answered "wrong question."</p>
+  <p class="note-hint">github.com/larionovaa2248-glitch/stochastic-project · Thank you — questions!</p>
+  <div class="notes"><h4>Speaker notes</h4><p>End on the reframed question. Offer the repo link for anyone who wants to reproduce — everything regenerates from seed 20260812.</p></div>
+</section>
+
+</div>
+
+<div class="hud"><span id="hud-title">Trading Against Noise</span><span id="hud-count"></span></div>
+<div class="bar" id="bar"></div>
+
+<script>
+(function () {
+  const slides = Array.from(document.querySelectorAll(".slide"));
+  const bar = document.getElementById("bar");
+  const count = document.getElementById("hud-count");
+  let i = 0, notesOn = false;
+
+  function show(n) {
+    i = Math.max(0, Math.min(slides.length - 1, n));
+    slides.forEach((s, k) => s.classList.toggle("active", k === i));
+    bar.style.width = ((i + 1) / slides.length * 100) + "%";
+    count.textContent = (i + 1) + " / " + slides.length + "  ·  N notes";
+    location.hash = "#/" + (i + 1);
+    syncNotes();
+  }
+  function syncNotes() {
+    slides.forEach((s, k) => {
+      const el = s.querySelector(".notes");
+      if (el) el.classList.toggle("show", notesOn && k === i);
+    });
+  }
+  addEventListener("keydown", (e) => {
+    if (["ArrowRight", "PageDown", " "].includes(e.key)) { e.preventDefault(); show(i + 1); }
+    else if (["ArrowLeft", "PageUp"].includes(e.key)) { e.preventDefault(); show(i - 1); }
+    else if (e.key === "Home") show(0);
+    else if (e.key === "End") show(slides.length - 1);
+    else if (e.key.toLowerCase() === "n") { notesOn = !notesOn; syncNotes(); }
+  });
+  addEventListener("click", (e) => {
+    if (e.target.closest("a, .notes")) return;
+    show(e.clientX > innerWidth / 3 ? i + 1 : i - 1);
+  });
+  function fromHash() {
+    const m = location.hash.match(/^#\/(\d+)/);
+    return m ? parseInt(m[1], 10) - 1 : 0;
+  }
+  addEventListener("hashchange", () => { if (fromHash() !== i) show(fromHash()); });
+  show(fromHash());
+})();
+</script>
+</body>
+</html>

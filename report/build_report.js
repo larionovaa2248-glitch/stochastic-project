@@ -1,0 +1,275 @@
+// Builds report/Stochastic_Modeling_Final_Report.docx from the committed
+// results and figures.
+// Regenerate with:  npm install docx && node report/build_report.js
+const fs = require("fs");
+const path = require("path");
+const {
+  AlignmentType, BorderStyle, Document, Footer, HeadingLevel, ImageRun,
+  LevelFormat, PageBreak, PageNumber, Packer, Paragraph, ShadingType, Table,
+  TableCell, TableRow, TableOfContents, TextRun, WidthType,
+} = require("docx");
+
+const ROOT = path.resolve(__dirname, "..");
+const FIG = (name) => fs.readFileSync(path.join(ROOT, "report", "figures", name));
+
+// ---------- helpers ----------------------------------------------------------
+const P = (text, opts = {}) => new Paragraph({
+  children: [new TextRun({ text, ...opts.run })],
+  spacing: { after: 160, line: 276 },
+  ...opts.para,
+});
+const H1 = (text) => new Paragraph({ text, heading: HeadingLevel.HEADING_1, spacing: { before: 360, after: 200 } });
+const H2 = (text) => new Paragraph({ text, heading: HeadingLevel.HEADING_2, spacing: { before: 280, after: 160 } });
+const BULLET = (children) => new Paragraph({
+  children, numbering: { reference: "bullets", level: 0 }, spacing: { after: 100, line: 276 },
+});
+const bullet = (text) => BULLET([new TextRun(text)]);
+const R = (text, opts = {}) => new TextRun({ text, ...opts });
+const B = (text) => new TextRun({ text, bold: true });
+const I = (text) => new TextRun({ text, italics: true });
+
+// math-ish paragraph: parts are [text, {subScript|superScript|italics}] tuples
+const MATH = (parts) => new Paragraph({
+  alignment: AlignmentType.CENTER,
+  spacing: { before: 120, after: 160 },
+  children: parts.map(([t, o]) => new TextRun({ text: t, font: "Cambria Math", size: 23, ...(o || {}) })),
+});
+const sub = { subScript: true };
+
+const FIGURE = (file, caption, widthPx = 600) => {
+  const img = FIG(file);
+  // PNGs are 2x exports; 1800x1040 (900x520 logical) except grids 1400x1120 and interaction 1600x1040
+  const dims = { "fig_grid_profit.png": [1400, 1120], "fig_grid_ploss.png": [1400, 1120],
+                 "fig_headline_interaction.png": [1600, 1040] };
+  const [w, h] = dims[file] || [1800, 1040];
+  return [
+    new Paragraph({
+      alignment: AlignmentType.CENTER, spacing: { before: 160, after: 60 },
+      children: [new ImageRun({ type: "png", data: img,
+        transformation: { width: widthPx, height: Math.round(widthPx * h / w) } })],
+    }),
+    new Paragraph({
+      alignment: AlignmentType.CENTER, spacing: { after: 220 },
+      children: [new TextRun({ text: caption, italics: true, size: 19, color: "52514E" })],
+    }),
+  ];
+};
+
+const CELL = (text, opts = {}) => new TableCell({
+  width: { size: opts.w, type: WidthType.DXA },
+  shading: opts.header ? { type: ShadingType.CLEAR, fill: "EFEFEC" } : undefined,
+  margins: { top: 60, bottom: 60, left: 100, right: 100 },
+  children: [new Paragraph({
+    alignment: opts.left ? AlignmentType.LEFT : AlignmentType.CENTER,
+    children: [new TextRun({ text, bold: !!opts.header, size: 19 })],
+  })],
+});
+const TABLE = (widths, rows) => new Table({
+  columnWidths: widths,
+  width: { size: widths.reduce((a, b) => a + b, 0), type: WidthType.DXA },
+  rows: rows.map((cells, ri) => new TableRow({
+    children: cells.map((c, ci) => CELL(c, { w: widths[ci], header: ri === 0, left: ci === 0 })),
+  })),
+});
+const CAPTION = (text) => new Paragraph({
+  alignment: AlignmentType.CENTER, spacing: { before: 60, after: 220 },
+  children: [new TextRun({ text, italics: true, size: 19, color: "52514E" })],
+});
+
+// ---------- content ----------------------------------------------------------
+const children = [];
+
+// Title block
+children.push(
+  new Paragraph({ spacing: { before: 2400 } }),
+  new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "Trading Against Noise:", bold: true, size: 56 })] }),
+  new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 240 }, children: [new TextRun({ text: "A Stochastic Simulation Study of Prediction-Market Trading Policies", bold: true, size: 34 })] }),
+  new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 400 }, children: [new TextRun({ text: "SHBI-GB.7301 — Stochastic Modeling & Simulation", size: 26 })] }),
+  new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "NYU Summer 2026 — Final Project Report", size: 26 })] }),
+  new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 400 }, children: [new TextRun({ text: "Team: Anastasia Larionova [add teammate names]", size: 24 })] }),
+  new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "August 2026", size: 24, color: "52514E" })] }),
+  new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 300 }, children: [new TextRun({ text: "Code, data, and interactive dashboard: github.com/larionovaa2248-glitch/stochastic-project", size: 20, color: "52514E" })] }),
+  new Paragraph({ children: [new PageBreak()] }),
+);
+
+// TOC
+children.push(
+  new Paragraph({ text: "Contents", heading: HeadingLevel.HEADING_1 }),
+  new TableOfContents("Table of Contents", { hyperlink: true, headingStyleRange: "1-2" }),
+  new Paragraph({ children: [new PageBreak()] }),
+);
+
+// ---------------- 1. Background ----------------
+children.push(H1("1. Background and Motivation"));
+children.push(H2("1.1 What a prediction market is"));
+children.push(P("A prediction market is an exchange for binary contracts on real-world events. On platforms such as Polymarket or Kalshi, a contract on the question “Will X happen?” trades at a price between $0 and $1 and pays $1 if the event occurs and $0 otherwise. Because the payoff is exactly $1 on a YES, the traded price has a natural interpretation as the market’s consensus probability of the event: a contract trading at $0.40 is, loosely, a 40% forecast. These markets aggregate dispersed information remarkably well, but they are not oracles — prices carry noise from order flow, thin liquidity, sentiment, and slow reactions to news."));
+children.push(H2("1.2 The question we study"));
+children.push(P("That gap between price and probability is the entire opportunity for a trader. If prices are sometimes wrong, a rule that recognizes “too cheap” moments should profit; if prices are essentially right, no rule beats simply holding. Our study asks a precise version of this question: can a simple, mechanical trading rule — one that compares the current price to a smoothed estimate of recent prices — systematically beat a buy-and-hold benchmark, and how does the answer depend on how noisy and how sluggish the market is?"));
+children.push(P("We answer it with a Monte Carlo simulation rather than with historical backtests, for a reason worth stating up front: in a simulation we control the ground truth. We can build a world in which the true probability exists and is hidden, tune exactly how wrong the market price is allowed to be, and then measure a policy’s profit against that known truth over tens of thousands of independent replications with proper confidence intervals. A historical backtest of the same rule could never separate skill from luck this cleanly, because reality never reveals its hidden probabilities."));
+children.push(H2("1.3 Deliverables and rubric mapping"));
+children.push(P("The project comprises (i) a vectorized, seeded simulation engine and policy library; (ii) a validation suite of 37 automated tests covering the professor’s five required correctness checks; (iii) a batch-experiment layer producing every number in this report with 95% confidence intervals; (iv) a calibration module that sets simulator inputs from live Polymarket data with a fully offline fallback; and (v) an interactive Streamlit dashboard used for the class demo. All code, result CSVs, and figures are reproducible from a single documented master seed (20260812)."));
+
+// ---------------- 2. Model ----------------
+children.push(H1("2. Model Construction and Assumptions"));
+children.push(P("The model has three layers, simulated in order every period t = 0, 1, …, T. The structure was fixed in the approved proposal and implemented exactly as specified; each layer’s formula and the reasoning behind it follow."));
+
+children.push(H2("2.1 Layer 1 — the hidden true probability"));
+children.push(MATH([["q", null], ["t+1", sub], [" = clip( q", null], ["t", sub], [" + σ", null], ["q", sub], [" · √(q", null], ["t", sub], ["(1 − q", null], ["t", sub], [")) · Z", null], ["t", sub], [" ,  ε, 1 − ε ),   Z", null], ["t", sub], [" ~ N(0,1) iid,  ε = 0.001", null]]));
+children.push(P("Each contract carries a true probability qₜ of settling YES that evolves as a bounded random walk and is never shown to any trading policy. Three assumptions are baked into this formula, each with a purpose:"));
+children.push(bullet("Martingale increments. The shocks Zₜ are zero-mean and symmetric, so E[qₜ₊₁ | qₜ] = qₜ. This is the discrete analogue of an efficient forecast: today’s truth is the best predictor of tomorrow’s. It also gives us sharp, testable implications (Section 4) — the average of q_T across replications must equal q₀, and the settlement frequency must too."));
+children.push(bullet("State-dependent step size. The √(q(1−q)) factor shrinks steps as q approaches 0 or 1, the same variance structure as a Bernoulli random variable. Probabilities near certainty move less — a 2-point swing is routine at q = 0.5 and enormous at q = 0.98. This keeps the walk inside (0,1) naturally, with the ε-clip as a numerical guard rather than the binding mechanism."));
+children.push(bullet("Markov dynamics. Tomorrow’s truth depends only on today’s, not the path taken. This is the simplest defensible information structure and keeps the model within the course’s Markov-process framework."));
+
+children.push(H2("2.2 Layer 2 — the observed market price"));
+children.push(P("Traders see only a noisy price pₜ. We implement two required variants that differ in one economically crucial way — whether mispricings persist:"));
+children.push(MATH([["Variant A (iid noise):    p", null], ["t", sub], [" = clip( q", null], ["t", sub], [" + η", null], ["t", sub], [" ,  0.01, 0.99 ),   η", null], ["t", sub], [" ~ N(0, σ", null], ["p", sub], ["²) iid", null]]));
+children.push(MATH([["Variant B (partial adjustment):    p", null], ["t", sub], [" = clip( p", null], ["t−1", sub], [" + κ (q", null], ["t", sub], [" − p", null], ["t−1", sub], [") + η", null], ["t", sub], [" ,  0.01, 0.99 )", null]]));
+children.push(P("Variant A says the market re-prices from scratch each period: errors are transient and vanish next period. Variant B says the market only closes a fraction κ ∈ (0,1] of its gap to the truth each period — a standard partial-adjustment scheme — so a shock to the price decays geometrically at rate (1−κ) and a cheap contract stays cheap for roughly 1/κ periods. Small κ therefore means sluggish, exploitable markets. Setting κ = 1 collapses Variant B into Variant A exactly (our implementation reproduces this path-for-path with identical random draws, and a test enforces it), which lets us treat persistence as a single continuous dial from “fully efficient repricing” to “very sticky.”"));
+
+children.push(H2("2.3 Layer 3 — settlement"));
+children.push(MATH([["Y ~ Bernoulli(q", null], ["T", sub], ["):   draw U ~ Uniform(0,1),  Y = 1{U < q", null], ["T", sub], ["}", null]]));
+children.push(P("At the horizon the contract settles by a single Bernoulli draw with success probability q_T, generated by the inverse transform method (Lecture 2). Profit per unit held is the payout minus the entry price, minus a per-trade cost c when costs are enabled. Settlement against the hidden q_T — not the final price — is what makes the design honest: a policy profits only by buying below true value, never by predicting the noise itself."));
+
+children.push(H2("2.4 Trading policies"));
+children.push(P("The policy family under study smooths the observed price into a fair-value estimate with an exponential moving average and buys on sufficiently large dips below it:"));
+children.push(MATH([["f", null], ["0", sub], [" = p", null], ["0", sub], [",   f", null], ["t", sub], [" = α p", null], ["t", sub], [" + (1 − α) f", null], ["t−1", sub], [";    buy 1 unit when  f", null], ["t", sub], [" − p", null], ["t", sub], [" > δ,  then hold to settlement", null]]));
+children.push(P("The smoothing weight α sets the memory of the estimate (small α = long memory) and the threshold δ sets how big a dip must be before it is called a mispricing rather than wiggle. We evaluate the full 3×3 grid α ∈ {0.1, 0.3, 0.6} × δ ∈ {0.02, 0.05, 0.10} against two benchmarks: buy-and-hold (buy one unit at t = 0, ignore the path — the “market is right” position) and never-trade (profit identically zero — the sanity floor). An optional symmetric exit rule (close when pₜ − fₜ > δ) is implemented and exposed in the dashboard but disabled in all reported results, which use the pure buy-and-hold-to-settlement family from the specification."));
+children.push(P("A design constraint we treat as inviolable is no lookahead: a policy’s decision at time t may depend only on prices up to and including t. The interface enforces this structurally — decide(price_history) receives a copy of p₀…pₜ and nothing else; there is no channel through which the hidden truth, future prices, or the settlement outcome could reach a policy. Section 4 describes the tests that guard this property, including one that was strengthened after an adversarial review caught a weakness."));
+
+children.push(H2("2.5 Randomness and reproducibility"));
+children.push(P("Every stochastic function takes an explicit numpy.random.Generator; nothing touches global random state. All randomness flows through standard normal draws or the inverse transform method, drawn up front in a fixed order (Layer-1 shocks, then Layer-2 noise, then settlement uniforms). Two properties follow. First, any seeded run is exactly reproducible — every number in this report regenerates from seed 20260812. Second, because Variants A and B consume identical draws, and because all policies at a given parameter point are evaluated on the same simulated batch, every comparison in this study uses common random numbers (Lecture 7), which pairs away path-level luck and shrinks comparison variance by roughly an order of magnitude."));
+
+children.push(H2("2.6 Optional extension — Poisson news jumps (default off)"));
+children.push(P("The approved model’s hidden truth diffuses smoothly, but real event probabilities occasionally lurch on news. As a clearly-flagged extension beyond the locked specification — disabled by default everywhere — we added jump dynamics to Layer 1: with per-period probability λ an event fires (a Bernoulli-per-period arrival process, the discrete-time Poisson process with geometric interarrival times), adding a zero-mean N(0, σ_J²) shock damped by the same √(q(1−q)) factor. Zero-mean jumps preserve the martingale property, so every Section-4 validation check still holds with jumps on. When λ = 0 the code consumes no additional random numbers, so the approved model’s seeded output is bit-for-bit unchanged — a property pinned by a golden-value regression test. All reported results use the approved model; the extension appears only in the live demo and in the future-work discussion (Section 6)."));
+
+// ---------------- 3. Simulation design ----------------
+children.push(H1("3. Simulation and Experiment Design"));
+children.push(H2("3.1 Vectorized batches and output analysis"));
+children.push(P("The engine simulates all replications of a batch as one 2-D array (replications × time), with the only Python loop over time — a batch of 20,000 hundred-period markets simulates in well under a second, which is what makes the interactive dashboard possible. For every policy we report the professor’s three measures plus an interval: expected profit, P(loss), mean loss given loss, and a CLT-based 95% confidence interval, mean ± 1.96·s/√n (Lecture 3). Comparisons against buy-and-hold use paired differences on common paths, and “beats buy-and-hold” always means the paired-difference CI lies entirely above zero — never a bare comparison of two means."));
+children.push(H2("3.2 Run-length control"));
+children.push(P("Following the Lecture 3 sequential procedure, a run-length controller doubles the number of replications until the CI half-width falls below a user tolerance. For the headline cell (EMA α=0.3, δ=0.05 at κ=0.2) reaching a ±0.005 half-width required 64,000 replications:"));
+children.push(TABLE([2340, 2340, 2340], [
+  ["Round", "Total replications", "95% CI half-width"],
+  ["0", "1,000", "0.0307"], ["1", "2,000", "0.0215"], ["2", "4,000", "0.0152"],
+  ["3", "8,000", "0.0108"], ["4", "16,000", "0.0076"], ["5", "32,000", "0.0054"],
+  ["6", "64,000", "0.0038  ✓ (≤ 0.005)"],
+]));
+children.push(CAPTION("Table 1. Sequential run-length control: half-width shrinks as 1/√n; the tolerance binds at n = 64,000 (final estimate +0.0571 ± 0.0038)."));
+children.push(...FIGURE("fig_run_length.png", "Figure 1. Run-length control on log–log axes: the observed half-width tracks the theoretical 1/√n slope until it crosses the 0.005 tolerance."));
+children.push(H2("3.3 Sweep design"));
+children.push(P("The experiment layer sweeps three dials — observation noise σ_p ∈ {0, 0.01, 0.02, 0.05, 0.08, 0.12}, persistence κ ∈ {0.05, 0.1, 0.2, 0.3, 0.5, 0.7, 1.0}, and per-trade cost c ∈ {0, 0.01, 0.02} — around a baseline market (q₀ = 0.40, T = 100, σ_q = 0.02, σ_p = 0.05, Variant B) chosen for realism in Section 5. Each sweep point uses an independent seeded batch of n = 20,000; within a point, all eleven policies share the same paths (common random numbers). Every CSV in results/ carries the full measure set for all nine grid policies and both benchmarks."));
+
+// ---------------- 4. Validation ----------------
+children.push(H1("4. Validation: Why the Numbers Can Be Trusted"));
+children.push(P("Thirty-seven automated tests run in under a second and gate every change. The five required checks, each a named test:"));
+children.push(bullet("Zero-noise limit. With σ_p = 0 and κ = 1 the price equals the hidden probability exactly; the degenerate EMA (α=1, δ=0) never detects a mispricing and never trades; and by optional stopping on the martingale qₜ, every grid policy’s expected profit equals buy-and-hold’s (all ≈ 0) — verified with paired-difference confidence bands."));
+children.push(bullet("Martingale property. Across 20,000 replications, mean q_T = 0.3996 against q₀ = 0.40 (SE 0.0005), and the settlement frequency is 0.4030 (SE 0.0035) — both within their bands, confirming E[q_T] = q₀ and P(Y=1) = E[q_T] by the law of total expectation."));
+children.push(bullet("Settlement calibration. Contracts started at q₀ = x settle YES a fraction ≈ x of the time across x ∈ {0.10, 0.25, 0.50, 0.75, 0.90} — the simulator’s probabilities mean what they claim."));
+children.push(bullet("No lookahead. A behavioural test perturbs all prices after t = 40 by +0.30 and verifies, through the real evaluation harness, that every trade decision before t = 40 is bit-identical — including for a deliberately “future-hungry” probe policy that trades on max(history) and would flip immediately if even one future price leaked. A complementary perturbation of past prices confirms decisions do change, so the test has power. Structural tests additionally pin the decide() signature and verify the harness hands each policy exactly p₀…pₜ as a fresh copy."));
+children.push(bullet("Seed reproducibility. Identical seeds give bit-identical batches; different seeds differ. A golden-value test additionally pins five path values and the settlement vector of a fixed seed, so any accidental change to the random stream — including from the news-jump extension — fails the suite."));
+children.push(P("Process note. The engine was also subjected to an adversarial multi-agent review (four independent reviewer perspectives, each finding attacked by two verifiers) before the experiment phase. It confirmed one real defect — the original future-perturbation check never actually showed the shocked prices to the policy, making it vacuous — which we repaired as described above, and it validated the rest of the engine against the specification. The full review log ships in the repository (results/review_log.md)."));
+
+// ---------------- 5. Results ----------------
+children.push(H1("5. Results and Model Performance"));
+children.push(H2("5.1 One market, period by period"));
+children.push(...FIGURE("fig_single_path.png", "Figure 2. A single simulated contract (Variant B, κ = 0.2). The dashed line is the hidden truth qₜ no trader can see; the blue line is the observed price; the green line is the EMA estimate; the triangle marks the policy’s entry. This contract settled YES: the policy earned $0.700 on a $0.300 entry."));
+children.push(P("Figure 2 shows the model’s mechanics on one path: the price rattles around the slow-moving truth, the EMA smooths the rattle, and the policy buys when the price falls far enough below its own smoothed history. The contract’s all-or-nothing settlement is why per-path outcomes are extreme — the interesting quantities are averages over many replications."));
+
+children.push(H2("5.2 The policy grid at the baseline"));
+children.push(...FIGURE("fig_grid_profit.png", "Figure 3. Expected profit per $1 contract over the (α, δ) grid at the baseline market (Variant B, κ = 0.3, σ_p = 0.05, n = 20,000, no costs). The outlined cell is the winner; its lead over buy-and-hold is CI-significant.", 430));
+children.push(TABLE([2900, 1610, 2130, 1310, 1410], [
+  ["Policy", "E[profit]", "95% CI", "P(loss)", "E[loss | loss]"],
+  ["EMA(α=0.1, δ=0.10) — winner", "+0.1015", "[+0.0949, +0.1082]", "58.8%", "−$0.289"],
+  ["EMA(α=0.3, δ=0.10)", "+0.0629", "[+0.0580, +0.0678]", "31.5%", "−$0.259"],
+  ["EMA(α=0.3, δ=0.05)", "+0.0614", "[+0.0546, +0.0682]", "60.2%", "−$0.336"],
+  ["EMA(α=0.6, δ=0.10)", "−0.0000", "[−0.0001, +0.0000]", "0.0%", "−$0.180"],
+  ["Buy-and-hold", "−0.0019", "[−0.0087, +0.0049]", "60.2%", "−$0.400"],
+  ["Never-trade", "0", "—", "0%", "—"],
+]));
+children.push(CAPTION("Table 2. Selected rows of the baseline comparison (full 11-policy table in results/policy_comparison_variantB_kappa03.csv). The winner’s paired edge over buy-and-hold is +0.1034, CI [+0.1020, +0.1049]."));
+children.push(P("Three observations. First, buy-and-hold earns nothing in expectation — as it must, since it buys at a price whose noise is mean-zero and collects an expectation-preserving payout; its CI comfortably covers zero. Second, eight of nine EMA cells beat it significantly, with a clear gradient toward slow smoothing and wide thresholds: α = 0.1 builds a long-memory estimate, and δ = 0.10 only pulls the trigger on roughly two-sigma dips, the ones most likely to be genuine mispricing rather than wiggle. Third, the corner cell (α=0.6, δ=0.10) almost never trades — fast smoothing keeps the EMA glued to the price, so a 10-cent gap essentially never opens — a useful reminder that these two dials interact: δ is measured in units of how much the EMA is allowed to lag."));
+children.push(P("The profit asymmetry deserves note: the winning policy loses more often than not (P(loss) = 58.8%) yet is strongly profitable, because conditioning on entry at a depressed price makes wins (payout $1 minus a cheap entry) larger than losses (a cheap entry forfeited). Its losses are also smaller than buy-and-hold’s (−$0.289 vs −$0.400 conditional on losing) — buying dips also means paying less when wrong."));
+
+children.push(H2("5.3 Headline experiment: how much persistence does the edge need?"));
+children.push(...FIGURE("fig_headline_kappa.png", "Figure 4. The best grid policy’s paired edge over buy-and-hold as a function of κ, for three per-trade cost levels (bands: 95% CIs). The edge is positive and significant everywhere, peaking near κ ≈ 0.2–0.3."));
+children.push(P("We designed this experiment expecting a threshold — the κ below which mispricing persists long enough for a smoothing rule to catch it. The simulation returned a more interesting answer: at realistic noise (σ_p = 0.05) there is no threshold. The best EMA cell beats buy-and-hold with CI-significance at every κ from 0.05 to 1.0 and at every cost level up to 2¢ per trade. Even the worst case for the trader — κ = 1 (fully transient noise) with 2¢ costs — leaves a paired edge of +0.0939, CI [+0.0913, +0.0965]."));
+children.push(P("Persistence instead shapes the edge, with an interior maximum near κ ≈ 0.2–0.3 (+0.1023, CI [+0.1007, +0.1038] at κ = 0.3). The intuition on both flanks is mechanical. When κ is large, errors correct almost immediately, so the dip the policy buys has mostly closed by the next period — profitable (the entry price was still below true value) but less so. When κ is very small (0.05), shocks persist for ~20 periods: dips last long enough to catch easily, but the mispricing also fails to finish correcting before the horizon, and entry prices reflect older, staler truths. In between sits the sweet spot: dips persist long enough to identify, and correct fully before settlement."));
+children.push(P("Costs barely move the comparison — the three curves in Figure 4 nearly coincide — for a subtle reason worth flagging: both the EMA policy and buy-and-hold trade at most once, so a per-trade fee hits both nearly equally, and the EMA policy occasionally stays out entirely and saves the fee. The paired edge is therefore almost cost-invariant, even as absolute profits fall with c (best-cell profit at κ = 0.3: +0.102 → +0.092 → +0.082 across c = 0, 1¢, 2¢)."));
+
+children.push(H2("5.4 The deeper finding: noise creates the edge, persistence shapes it"));
+children.push(...FIGURE("fig_headline_interaction.png", "Figure 5. Best-cell paired edge over buy-and-hold across the (κ, σ_p) grid at c = 1¢. All 28 cells are CI-significant; the edge climbs with noise at every persistence level.", 470));
+children.push(P("Sweeping noise and persistence jointly reveals the study’s central result. Reading Figure 5 by rows: at σ_p = 0.01 the edge is a razor-thin +0.008– +0.017 per contract; at σ_p = 0.05 it is roughly +0.08–+0.10; at σ_p = 0.08 it reaches +0.14. Reading by columns: at any fixed noise level, moving κ barely changes the edge by comparison. And the zero-noise sweep column (Table 3) closes the argument: with σ_p = 0 no policy in the grid beats buy-and-hold at any κ — the largest paired difference is +0.0027 and not significant."));
+children.push(TABLE([2340, 3120, 2340], [
+  ["σ_p (noise)", "Best-cell paired edge vs BH", "CI-significant?"],
+  ["0.00", "+0.0027", "no"],
+  ["0.01", "+0.0121", "yes"],
+  ["0.02", "+0.0331", "yes"],
+  ["0.05", "+0.0913", "yes"],
+  ["0.08", "+0.1385", "yes"],
+  ["0.12", "+0.2061", "yes"],
+]));
+children.push(CAPTION("Table 3. Noise sweep at κ = 1 (Variant A limit): the edge scales with observation noise and vanishes exactly when noise does."));
+children.push(P("The economic reading: a dip-buying rule is fundamentally a bet that price movements below trend are noise, not news. In this model — where the hidden truth is a martingale and every deviation of price from truth is, by construction, transient error — that bet is correct by design, and its profitability is proportional to how much error there is to harvest. Mispricing persistence (κ) only governs how easy the harvesting is. This framing also tells us exactly where the result should break, which motivates the news-jump extension revisited in Section 6."));
+
+children.push(H2("5.5 Risk profile"));
+children.push(...FIGURE("fig_profit_distribution.png", "Figure 6. Per-contract profit distributions, EMA(0.3, 0.05) vs buy-and-hold (κ = 0.2, c = 1¢, n = 20,000). Binary settlement makes both bimodal; the EMA policy’s mass sits to the right in both lobes and it has a third spike at exactly zero (paths where it never entered)."));
+children.push(P("Expected profit is not the whole story for a trader. Figure 6 shows both strategies inherit the contract’s all-or-nothing character — profits cluster in a loss lobe (bought, settled NO) and a win lobe (bought, settled YES). The EMA policy’s advantages are visible in both: its loss lobe sits closer to zero (it pays less when wrong) and its win lobe sits further right (it pays less when right, too). Its P(loss) is similar to buy-and-hold’s at these settings, so the rule does not reduce how often you lose — it reduces how much losing costs and increases how much winning pays."));
+
+children.push(H2("5.6 Calibration to real markets: are the parameters realistic?"));
+children.push(P("To keep the simulated regimes honest, the calibration module pulls real price histories from Polymarket’s public APIs (metadata from the Gamma API, hourly price series from the CLOB endpoint) and maps them onto model inputs by method of moments. Under Variant A the observed increment is Δpₜ = Δqₜ + ηₜ − ηₜ₋₁, an MA(1) in the noise, giving two estimating equations: Cov(Δpₜ, Δpₜ₋₁) = −σ_p² identifies the noise, and the residual variance — deflated by the mean of p(1−p) as the proxy for the damping factor — identifies σ_q. A test verifies the estimator recovers known parameters from long simulated series within 25% relative error."));
+children.push(P("Five diverse markets (politics, geopolitics, financial milestones; 418–743 hourly observations each, fetched 2026-08-10) are committed to the repository as offline samples, so every feature works without network access. Their implied σ_q ranges from 0.002 to 0.019 per step — bracketing our default σ_q = 0.02 at the volatile end, which is the appropriate stress setting for studying trading rules. Their implied iid noise on hourly closes is small (σ_p ≤ 0.002), consistent with hourly aggregation smoothing microstructure noise; we therefore treat σ_p as the stress dimension and sweep it, rather than claiming any single value is “the” real one. Scope guard, stated in the specification and honored throughout: real data sets simulator inputs only. We do not fit the model to real series and we do not backtest policies on real data; no claim in this report is a claim about realized Polymarket profits."));
+
+// ---------------- 6. Conclusion ----------------
+children.push(H1("6. Conclusions and Future Work"));
+children.push(H2("6.1 What we built"));
+children.push(P("A three-layer stochastic model of a prediction market — hidden martingale truth, noisy observed price with tunable persistence, Bernoulli settlement — implemented as a fully vectorized, seed-deterministic simulation engine; a policy library with a structurally lookahead-proof interface; an experiment layer with CLT confidence intervals, common random numbers, and sequential run-length control; a 37-test validation suite; real-data calibration with an offline fallback; and an interactive dashboard that runs every analysis in this report live."));
+children.push(H2("6.2 What we found"));
+children.push(bullet("A simple EMA dip-buying rule beats buy-and-hold decisively in this model: +0.10 per $1 contract at the baseline, CI-significant across the entire persistence range and up to 2¢ per-trade costs."));
+children.push(bullet("The expected threshold — “how small must κ be before the rule works?” — does not exist at realistic noise. Instead the edge has an interior optimum in κ (≈ 0.2–0.3), where mispricings persist long enough to catch and still correct before settlement."));
+children.push(bullet("The deeper mechanism: observation noise creates the edge (it vanishes exactly at σ_p = 0 and scales with σ_p everywhere else); persistence and costs only modulate it. Dip-buying profits here because, by construction, every dip is noise."));
+children.push(bullet("Slow smoothing with a wide threshold (α = 0.1, δ = 0.10) dominates the grid — patience in both dials — while fast smoothing with a wide threshold barely trades at all."));
+children.push(H2("6.3 Limitations"));
+children.push(P("The model is deliberately stylized. There is no order book, no price impact, no liquidity constraint — the policy trades one unit at the posted price, so profits should be read as per-contract edges, not fund returns. The truth process has no drift or regime structure, and in the approved model every price deviation is transient noise — the exact condition under which dip-buying must win. Real markets mix noise with news, and κ and σ_p are not separately identified from our hourly real-data estimates. These are boundaries of the claim, not flaws in the measurement inside them."));
+children.push(H2("6.4 Future directions"));
+children.push(bullet("News jumps, studied properly. Our default-off Poisson-jump extension already shows the mechanism in single paths: after a genuine downward jump, the lagging price triggers the dip signal while the contract is still overpriced, and the policy buys into bad news. A natural next study sweeps jump intensity λ to find where the EMA edge crosses zero — the point at which a dip is more likely news than noise — and calibrates λ from the frequency of outsized moves in real series."));
+children.push(bullet("Adaptive and asymmetric policies: exit rules (implemented, unstudied), position sizing by signal strength, and Kelly-style stake scaling on the estimated mispricing."));
+children.push(bullet("Microstructure realism: bid-ask spread as a state-dependent cost, depth limits, and price impact of the policy’s own trades."));
+children.push(bullet("Multi-market extensions: correlated contracts and portfolio-level risk measures across simultaneous markets."));
+children.push(P("The broader takeaway we would offer the class: the most valuable output of a simulation study is often not the number you asked for but the mechanism it forces you to articulate. We asked “how much persistence does a trader need?” and the model answered “wrong question — count the noise, not the stickiness.” That answer came with confidence intervals, survived an adversarial review and 37 tests, and regenerates from one seed."));
+
+// ---------- document ----------
+const doc = new Document({
+  styles: {
+    default: { document: { run: { font: "Calibri", size: 22 } } },
+    paragraphStyles: [
+      { id: "Heading1", name: "Heading 1", basedOn: "Normal", next: "Normal", quickFormat: true,
+        run: { font: "Calibri", size: 32, bold: true, color: "1A1A19" } },
+      { id: "Heading2", name: "Heading 2", basedOn: "Normal", next: "Normal", quickFormat: true,
+        run: { font: "Calibri", size: 26, bold: true, color: "2A2A28" } },
+    ],
+  },
+  numbering: {
+    config: [{
+      reference: "bullets",
+      levels: [{ level: 0, format: LevelFormat.BULLET, text: "•", alignment: AlignmentType.LEFT,
+        style: { paragraph: { indent: { left: 480, hanging: 240 } } } }],
+    }],
+  },
+  features: { updateFields: true },
+  sections: [{
+    properties: { page: { size: { width: 12240, height: 15840 }, margin: { top: 1440, bottom: 1440, left: 1440, right: 1440 } } },
+    footers: {
+      default: new Footer({ children: [new Paragraph({
+        alignment: AlignmentType.CENTER,
+        children: [new TextRun({ children: [PageNumber.CURRENT], size: 18, color: "898781" })],
+      })] }),
+    },
+    children,
+  }],
+});
+
+Packer.toBuffer(doc).then((buf) => {
+  const out = path.join(ROOT, "report", "Stochastic_Modeling_Final_Report.docx");
+  fs.writeFileSync(out, buf);
+  console.log("wrote", out, `(${(buf.length / 1024).toFixed(0)} KB)`);
+});
