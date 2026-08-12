@@ -16,6 +16,17 @@ Controls: **←/→** (or space / click) to navigate · **N** toggles speaker
 notes · **Home/End** jump · URL hash (`#/12`) deep-links a slide · print to
 PDF via the browser for a handout.
 
+## Speaker script
+
+`Speaker_Script.docx` is a verbatim presenter script — one section per slide
+with timing marks (~20 minutes total), stage directions in italics, a
+pre-talk setup checklist, the 5-step demo walkthrough, and prepared answers
+for likely questions. Regenerate it with:
+
+```bash
+npm install docx && node slides/build_speaker_script.js
+```
+
 ## The live-demo slide
 
 Slide 16 links to the dashboard at `http://localhost:8601`. Before
