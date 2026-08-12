@@ -6,7 +6,21 @@ We simulate a Polymarket/Kalshi-style binary prediction market with a hidden tru
 probability, a noisy observed price, and settlement at the horizon, then evaluate
 EMA-threshold trading policies against buy-and-hold and never-trade benchmarks.
 
-## Quickstart
+## One-command run (Windows, macOS, Linux)
+
+```bash
+python run.py
+```
+
+That single command creates a local virtual environment, installs all
+dependencies, runs the 37-test validation suite, and opens the interactive
+dashboard in your browser. On **Windows** you can simply double-click
+`run.bat`; on macOS/Linux `./run.sh` does the same. Useful flags:
+`--experiments` regenerates every CSV and figure from the master seed,
+`--slides` serves the presentation deck instead, `--no-dashboard` stops
+after the tests. Requires only Python 3.11+ on the PATH.
+
+## Manual setup (equivalent)
 
 ```bash
 python3 -m venv .venv
