@@ -494,7 +494,12 @@ drops ≈ 62%, decaying roughly linearly, because the rule buys downward
 repricings it cannot distinguish from noise and cannot buy the upward ones.
 Under variant A with jumps the winning cell shifts from slow (α=0.1) to fast
 (α=0.6) smoothing — when the world can jump, long memory becomes a stale
-anchor. Try it live: toggle jumps on and watch the Policy Lab verdict.
+anchor. The λ × jump-size frontier (results/jump\_frontier.csv) locates where
+the edge actually dies: at (λ=0.20, σ_J=0.60) dip-buying significantly
+*loses* to buy-and-hold (−0.007, CI [−0.009, −0.004]), and on the way there
+the winning threshold retreats from δ=0.10 to δ=0.02 — big dips stop being
+bargains and start being information. Try it live: toggle jumps on and watch
+the Policy Lab verdict.
 
 **Scope guard.** Real Polymarket data only *sets inputs* (q₀ and volatilities,
 estimated by method of moments). We do **not** fit the model to real data or

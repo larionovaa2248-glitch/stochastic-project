@@ -94,6 +94,13 @@ downward repricings it cannot distinguish from noise and cannot buy upward
 ones (rising prices sit above their EMA). Under variant A with jumps the
 winning cell shifts from slow (alpha=0.1) to fast (alpha=0.6) smoothing.
 
+News frontier (`jump_frontier.csv`, lambda × jump-size grid, cost 0.01): the
+edge declines along both axes and CROSSES ZERO at (lambda=0.20, sigma_J=0.60)
+— one large news event per five periods — where the best cell significantly
+LOSES to buy-and-hold: −0.0066, CI [−0.0089, −0.0044], and no grid cell is
+significant-positive. En route, the winning threshold retreats from
+delta=0.10 to delta=0.02: big dips become information, not bargains.
+
 ## Validation (Section 7) — all 37 tests green
 
 - Zero noise: price = hidden probability exactly; EMA(1, 0) never trades;

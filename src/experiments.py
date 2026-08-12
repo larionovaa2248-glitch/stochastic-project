@@ -441,6 +441,32 @@ def sweep_jump_rate(
     return pd.DataFrame(rows)
 
 
+def jump_frontier_table(
+    rates=(0.02, 0.05, 0.10, 0.20),
+    scales=(0.10, 0.20, 0.40, 0.60),
+    cost: float = 0.01,
+    n_reps: int = 20000,
+    seed: int = MASTER_SEED,
+) -> pd.DataFrame:
+    """EXTENSION: map the news frontier over (lambda, jump size).
+
+    For each cell of the grid, record the best EMA policy's paired edge over
+    buy-and-hold and whether any grid policy is CI-significant — locating the
+    boundary where a dip becomes more likely news than noise and dip-buying
+    stops working.  Variant B, kappa = 0.3, as in the other jump experiments.
+    """
+    rows = []
+    i = 0
+    for lam in rates:
+        for sc in scales:
+            params = replace(BASELINE, kappa=0.3, jump_rate=lam, jump_scale=sc)
+            paths = simulate_market_seeded(params, n_reps, seed + 409 + 1000 * i)
+            i += 1
+            rows.append({"jump_rate": lam, "jump_scale": sc, "cost": cost,
+                         **_best_cell_row(paths, cost)})
+    return pd.DataFrame(rows)
+
+
 def run_extension(n_reps: int = 20000, seed: int = MASTER_SEED, verbose: bool = True) -> dict[str, pd.DataFrame]:
     """Run the extension experiments and save their CSVs (clearly separated
     from the approved-model outputs)."""
@@ -448,6 +474,7 @@ def run_extension(n_reps: int = 20000, seed: int = MASTER_SEED, verbose: bool = 
     out = {
         "model_case_matrix": model_case_matrix(n_reps=n_reps, seed=seed),
         "sweep_jump_rate": sweep_jump_rate(n_reps=n_reps, seed=seed),
+        "jump_frontier": jump_frontier_table(n_reps=n_reps, seed=seed),
     }
     for name, df in out.items():
         df.to_csv(RESULTS_DIR / f"{name}.csv", index=False)

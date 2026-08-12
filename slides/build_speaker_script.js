@@ -37,11 +37,11 @@ children.push(
   new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 60 },
     children: [new TextRun({ text: "Trading Against Noise — SHBI-GB.7301 Final Presentation", size: 28 })] }),
   new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 400 },
-    children: [new TextRun({ text: "17 slides · ~20 minutes including the live demo · slides/index.html", size: 22, color: "52514E" })] }),
+    children: [new TextRun({ text: "18 slides · ~20 minutes including the live demo · slides/index.html", size: 22, color: "52514E" })] }),
 );
 
 children.push(new Paragraph({ heading: HeadingLevel.HEADING_1, text: "Before you start", spacing: { after: 160 } }));
-children.push(P("Timing plan: opening and setup ≈ 3 minutes (slides 1–3), the model ≈ 5 minutes (slides 4–7), trust and method ≈ 3 minutes (slides 8–9), results ≈ 4 minutes (slides 10–13), reality and extension ≈ 2 minutes (slides 14–15), live demo ≈ 4–5 minutes (slide 16), close ≈ 1 minute (slide 17). If you are running long, the safest cuts are slide 13 (risk profile) and the second half of slide 14."));
+children.push(P("Timing plan: opening and setup ≈ 3 minutes (slides 1–3), the model ≈ 5 minutes (slides 4–7), trust and method ≈ 2.5 minutes (slides 8–9), core results ≈ 4 minutes (slides 10–12), the news extension ≈ 2.5 minutes (slides 13–14), risk and reality ≈ 1.5 minutes (slides 15–16), live demo ≈ 4 minutes (slide 17), close ≈ 1 minute (slide 18). If you are running long, the safest cuts are slide 15 (risk profile) and the second half of slide 16 (real-data details) — do NOT cut 13–14; they are the falsification test of the main claim."));
 children.push(P("Setup checklist: start the dashboard BEFORE class with “streamlit run dashboard/app.py” and load it once so caches are warm; open the slides in a full-screen browser window; press N once to confirm speaker notes toggle works, then leave them off; have polymarket.com open in another tab in case you want a live URL for the demo."));
 children.push(P("Text in plain type below is meant to be spoken, roughly verbatim. Italic indented lines are stage directions — do not read them aloud."));
 
@@ -109,25 +109,34 @@ children.push(P("What persistence does instead is shape the edge, with a peak at
 // ---- Slide 12 ----
 children.push(SLIDE(12, "The twist — noise creates the edge", "1.5 min"));
 children.push(P("So if persistence isn't the driver, what is? This heatmap is the real answer, and it's the central slide of the talk. Read it by rows: at every persistence level, the edge scales with the amount of noise. Tiny noise, tiny edge. Big noise, twenty cents of edge. And the bottom line of the table: at exactly zero noise, the edge is exactly nothing — statistically indistinguishable from zero at any kappa."));
-children.push(P("So the mechanism is: observation noise CREATES the opportunity; persistence only shapes how easy it is to harvest. Which makes sense once you say it out loud — a dip-buying rule is fundamentally a bet that dips are noise, not news. In this model, by construction, every dip IS noise. That framing also tells us exactly where the result should break — and we tested that too, which is slide fifteen."));
+children.push(P("So the mechanism is: observation noise CREATES the opportunity; persistence only shapes how easy it is to harvest. Which makes sense once you say it out loud — a dip-buying rule is fundamentally a bet that dips are noise, not news. In this model, by construction, every dip IS noise. Which should make you suspicious: is the result circular? The only honest answer is to build a world where dips CAN be news — and that's exactly what we did next."));
 
 // ---- Slide 13 ----
-children.push(SLIDE(13, "Risk profile", "1 min"));
-children.push(P("A quick look past the averages, because a real trader cares about the distribution. Settlement is all-or-nothing, so profits are bimodal — you see a loss lobe, paths where we bought and the contract died, and a win lobe where it paid. Here's the counterintuitive part: the winning strategy loses MORE often than not — fifty-nine percent of the time — and is still strongly profitable. Buying cheap cuts both ways: when you're wrong you've lost a smaller stake — twenty-nine cents versus forty for buy-and-hold — and when you're right, the payout is the same dollar bought at a discount. It doesn't lose less often; it loses less."));
+children.push(SLIDE(13, "The jump model — Poisson arrivals", "1.5 min"));
+children.push(P("So here is that test. We let the hidden truth take news shocks, and the right tool for “rare events arriving at random times” is the Poisson process. In discrete time it's beautifully simple: every period, independently, a news event fires with probability lambda. That single assumption buys the whole Poisson toolkit — waiting times between events are geometric, meaning memoryless: having waited ten periods for news tells you nothing about the eleventh; and the number of events over the horizon is approximately Poisson with mean lambda times T. Lambda reads directly as “news arrives about once every one-over-lambda periods.”"));
+children.push(P("The formula on screen is Layer one with one extra term: the usual diffusion shock, plus — only when the Bernoulli fires — a second, larger zero-mean shock, both damped by the same square-root factor so jumps respect the probability boundaries."));
+children.push(DIRECTION("Point at the B-sub-t term in the formula, then tick off the three bullets."));
+children.push(P("Three properties keep this disciplined. The jumps are zero-mean, so the truth is still a martingale — all thirty-seven validation tests pass with jumps switched on. The increments become a Gaussian mixture: same idea as before plus fat tails — occasional lurches, which is exactly what a plain diffusion can't produce; just raising sigma-q would add wiggle, not lurches. And when lambda is zero the code draws no extra random numbers at all, so the approved model is untouched, bit for bit — we pin that with a regression test."));
+children.push(P("And look what happens on the very first path we examined — seed forty-two, on screen. The truth jumps down on news, three diamonds. The price slides after it, lagging. That slide reads as a dip against the moving average — so our strategy buys real bad news at forty cents. The contract settles at zero. Minus forty cents. Under jumps, some dips are news, and the rule cannot tell."));
 
 // ---- Slide 14 ----
-children.push(SLIDE(14, "Grounding in reality", "1 min"));
+children.push(SLIDE(14, "What news does to the edge", "1.5 min"));
+children.push(P("Now the same machinery, quantified — twenty thousand replications per cell, all four model worlds: both price variants, jumps on and off. Headline: the edge survives moderate news everywhere, but it pays a steep tax — down about a quarter at one news event per twenty periods, down nearly two-thirds at one per five. The erosion is close to linear in lambda."));
+children.push(P("Then we swept news rate and jump size together, and that's this heatmap — we call it the news frontier. The edge falls along both axes, and in the top-right corner it actually crosses zero: at one large news event every five periods, dip-buying doesn't just stop winning — it becomes significantly WORSE than buy-and-hold."));
+children.push(DIRECTION("Trace a diagonal from bottom-left (≈ the approved model) to the X in the top-right corner."));
+children.push(P("Two adaptations happen on the way to that frontier, and they're my favorite findings in the project. First, the winning threshold shrinks — from ten cents down to two. As news gets common, BIG dips stop being bargains and start being information, so the surviving strategy retreats to small, quick dips that news rarely produces. Second, under variant A the winner flips from slow smoothing to fast smoothing: when the world can jump, long memory stops being patience and becomes a stale anchor. So the full thesis, now with its boundary: the edge equals the share of the market's error budget that is noise rather than news — and we can point to the exact spot where the sign flips."));
+
+// ---- Slide 15 ----
+children.push(SLIDE(15, "Risk profile", "1 min"));
+children.push(P("A quick look past the averages, because a real trader cares about the distribution. Settlement is all-or-nothing, so profits are bimodal — you see a loss lobe, paths where we bought and the contract died, and a win lobe where it paid. Here's the counterintuitive part: the winning strategy loses MORE often than not — fifty-nine percent of the time — and is still strongly profitable. Buying cheap cuts both ways: when you're wrong you've lost a smaller stake — twenty-nine cents versus forty for buy-and-hold — and when you're right, the payout is the same dollar bought at a discount. It doesn't lose less often; it loses less."));
+
+// ---- Slide 16 ----
+children.push(SLIDE(16, "Grounding in reality", "1 min"));
 children.push(P("Are our dials realistic? We pull real price histories straight from Polymarket's public APIs — you can paste any market URL into our dashboard — and map them onto model inputs by method of moments: the lag-one autocovariance of price changes identifies the observation noise, the residual variance identifies the hidden volatility. Five real markets ship with the repo as offline samples, so everything works without wifi."));
 children.push(P("The verdict: real hidden-volatility estimates run from 0.002 to 0.019 per hour-step, so our default of 0.02 sits at the realistic-but-volatile end — the right stress setting. And to repeat the scope guard: real data sets inputs only. We do not backtest on it, and we make no claims about real-world profits."));
 
-// ---- Slide 15 ----
-children.push(SLIDE(15, "Extension — Poisson news jumps", "1.5 min"));
-children.push(P("Slide twelve predicted where the result breaks: when dips can be news instead of noise. So we tested it. As a clearly-flagged extension beyond the approved model — off by default, and guarded so that when it's off, the approved model's output is bit-for-bit unchanged — we let the hidden truth take rare, large, zero-mean jumps, arriving as a Poisson process."));
-children.push(P("The first path we looked at tells the story: the truth jumps down on news, the lagging price slides after it, the slide reads as a dip against the moving average, and our strategy buys real bad news at forty cents. The contract settles at zero. Minus forty cents."));
-children.push(P("Quantified across all four model worlds — both variants, jumps on and off — the edge survives but decays roughly linearly in the news rate: down a quarter at one news event per twenty periods, down two-thirds at one per five. And a detail we love: with jumps on, the winning strategy flips from slow smoothing to fast smoothing. When the world can jump, long memory stops being patience and becomes a stale anchor."));
-
-// ---- Slide 16 ----
-children.push(SLIDE(16, "Live demo", "4–5 min"));
+// ---- Slide 17 ----
+children.push(SLIDE(17, "Live demo", "4–5 min"));
 children.push(P("Enough slides — let's break the market live."));
 children.push(DIRECTION("Click “Open the dashboard”. Demo script, in order:"));
 children.push(DIRECTION("1. Single Path Explorer: hit Resimulate two or three times. Say: “dashed line is the truth the trader can't see; blue is what they trade on.”"));
@@ -137,12 +146,12 @@ children.push(DIRECTION("4. News jumps: open the 🗞️ expander, toggle jumps 
 children.push(DIRECTION("5. If time allows: Policy Grid tab — point at the outlined winner; Sensitivity tab — the kappa curve live."));
 children.push(P("Everything you just saw is seeded — if you run this at home with the same seed, you get these exact paths, trades, and intervals."));
 
-// ---- Slide 17 ----
-children.push(SLIDE(17, "Conclusions", "1 min"));
-children.push(P("To land the plane. A naive dip-buying rule beats buy-and-hold decisively in this model — ten cents per dollar contract, significant across the entire persistence range, surviving realistic fees. The threshold we went looking for doesn't exist: noise creates the edge, persistence only shapes it, and news erodes it — linearly, and measurably."));
+// ---- Slide 18 ----
+children.push(SLIDE(18, "Conclusions", "1 min"));
+children.push(P("To land the plane. A naive dip-buying rule beats buy-and-hold decisively in this model — ten cents per dollar contract, significant across the entire persistence range, surviving realistic fees. The threshold we went looking for doesn't exist: noise creates the edge, persistence only shapes it, and news erodes it linearly — all the way to a frontier we mapped, where the sign actually flips."));
 children.push(P("The bigger lesson we'd offer: the most valuable output of a simulation study isn't the number you asked for — it's the mechanism it forces you to articulate. We asked how much persistence a trader needs. The model told us we'd asked the wrong question, and handed us a better one: count the noise, not the stickiness."));
 children.push(P("Everything — code, thirty-seven tests, every CSV, the dashboard, and these slides — is on GitHub and regenerates from one seed. Thank you. Questions?"));
-children.push(DIRECTION("Likely questions: “Can I make money on Polymarket with this?” → scope-guard answer: the model assumes all mispricing is noise; real markets mix noise and news, and slide 15 shows what news does. “Why EMA and not something smarter?” → the point was whether even a naive rule finds the noise; smarter rules are future work. “Why is buy-and-hold exactly zero?” → martingale truth plus mean-zero noise at entry: it pays a fair price on average."));
+children.push(DIRECTION("Likely questions: “Can I make money on Polymarket with this?” → scope-guard answer: the approved model assumes all mispricing is noise; slides 13–14 show what news does, and real markets sit somewhere on that frontier — we haven't located them on it yet. “Why EMA and not something smarter?” → the point was whether even a naive rule finds the noise; smarter rules are future work. “Why is buy-and-hold exactly zero?” → martingale truth plus mean-zero noise at entry: it pays a fair price on average. “Why Bernoulli instead of a ‘real’ Poisson?” → Bernoulli-per-period IS the Poisson process in discrete time: geometric interarrivals are the discrete exponential, and the count converges to Poisson(λT); our whole model lives in discrete time, so this is the native formulation."));
 
 const doc = new Document({
   styles: {

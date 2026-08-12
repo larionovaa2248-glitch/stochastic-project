@@ -316,7 +316,48 @@
   <div class="notes"><h4>Speaker notes</h4><p>This is the thesis slide. It also tells us where the result must break: when dips can be NEWS. Segue to the extension.</p></div>
 </section>
 
-<!-- 13 ─ Risk -->
+<!-- 13 ─ Jump model -->
+<section class="slide">
+  <div class="kicker">Extension · the stress test slide 12 demands · default OFF</div>
+  <h2>Add news: <span class="hl">Poisson arrivals</span> in the hidden truth</h2>
+  <div class="formula orange">q<sub>t+1</sub> = clip( q<sub>t</sub> + √(q<sub>t</sub>(1−q<sub>t</sub>)) · [ σ<sub>q</sub>·Z<sub>t</sub> + B<sub>t</sub>·σ<sub>J</sub>·G<sub>t</sub> ] )&nbsp;&nbsp;&nbsp;<span class="c">B<sub>t</sub> ~ Bernoulli(λ)</span></div>
+  <div class="cols cols-31">
+    <ul>
+      <li><strong>Discrete-time Poisson process:</strong> geometric interarrivals (memoryless), event count ≈ Poisson(λT)</li>
+      <li><strong>Zero-mean jumps keep the martingale</strong> ⇒ all 37 validation tests pass with jumps ON</li>
+      <li><strong>Gaussian mixture increments:</strong> variance (σ<sub>q</sub>² + λσ<sub>J</sub>²)·q(1−q) + <em>fat tails</em> — lurches, not just more wiggle</li>
+      <li><strong>λ = 0 draws nothing extra</strong> — approved model bit-for-bit (golden test)</li>
+    </ul>
+    <div>
+      <div class="fig"><img src="assets/fig_jump_path.png" alt="A dip that was news"></div>
+      <div class="figcap">Seed 42: the strategy buys a "dip" that was news → −$0.399</div>
+    </div>
+  </div>
+  <div class="notes"><h4>Speaker notes</h4><p>This is the falsification test of slide 12, not decoration. Walk the formula: same diffusion plus a Bernoulli-gated jump term. Stress the three math facts fast, then tell the seed-42 story on the figure.</p></div>
+</section>
+
+<!-- 14 ─ News results -->
+<section class="slide">
+  <div class="kicker">Extension · quantified · all four model cases</div>
+  <h2>News erodes the edge — and we <span class="hl">mapped where it dies</span></h2>
+  <div class="cols">
+    <div>
+      <div class="fig"><img src="assets/fig_jump_frontier.png" alt="News frontier heatmap"></div>
+      <div class="figcap">Best-cell edge across (λ, jump size) · X = dip-buying stops beating BH</div>
+    </div>
+    <div>
+      <ul>
+        <li>Erosion is ~linear in λ: <strong>−24%</strong> at one event per 20 periods, <strong>−62%</strong> at one per 5 (σ<sub>J</sub>=0.2)</li>
+        <li><strong>The frontier is real:</strong> at (λ=0.2, σ<sub>J</sub>=0.6) the best cell <em>significantly loses</em> — −0.007 [−0.009, −0.004]</li>
+        <li>On the way there, winners retreat: δ 0.10 → 0.02 — <strong>big dips become information</strong>, not bargains</li>
+        <li>Variant A + jumps: winner flips slow → fast smoothing — long memory becomes a stale anchor</li>
+      </ul>
+    </div>
+  </div>
+  <div class="notes"><h4>Speaker notes</h4><p>Read the heatmap corner to corner: bottom-left ≈ the approved model, top-right = news-dominated. The δ retreat is the subtlest point — say it slowly. This completes the thesis: the edge equals the noise share of the error budget, and we can now say where the sign flips.</p></div>
+</section>
+
+<!-- 15 ─ Risk -->
 <section class="slide">
   <div class="kicker">Risk profile</div>
   <h2>The rule doesn't lose <span class="hl">less often</span> — it loses <span class="hl">less</span></h2>
@@ -334,7 +375,7 @@
   <div class="notes"><h4>Speaker notes</h4><p>Good place for the "expected value isn't the whole story" caveat — a real trader cares about the distribution, and settlement risk dominates path risk here.</p></div>
 </section>
 
-<!-- 14 ─ Real data -->
+<!-- 16 ─ Real data -->
 <section class="slide">
   <div class="kicker">Grounding in reality</div>
   <h2>Real Polymarket data <span class="hl">sets the inputs</span> — nothing more</h2>
@@ -353,21 +394,7 @@
   <div class="notes"><h4>Speaker notes</h4><p>Anticipate the obvious question ("so can I make money on Polymarket?") with the scope guard. The model assumes all mispricing is noise; reality mixes noise with news.</p></div>
 </section>
 
-<!-- 15 ─ Extension -->
-<section class="slide">
-  <div class="kicker">Extension · beyond the approved model · default OFF</div>
-  <h2>Poisson <span class="hl">news jumps</span> — where dip-buying should break</h2>
-  <div class="formula orange">with prob λ each period:&nbsp; q gets an extra zero-mean N(0, σ<sub>J</sub>²) shock&nbsp;&nbsp;<span class="c">Bernoulli-per-period = discrete-time Poisson arrivals</span></div>
-  <ul>
-    <li>Zero-mean jumps <strong>preserve the martingale</strong> — every validation check still passes with jumps on</li>
-    <li>λ = 0 consumes <strong>zero extra random numbers</strong> — approved-model results are bit-for-bit unchanged (golden test)</li>
-    <li><strong>First path we looked at</strong> (seed 42): truth jumps down on news → lagging price triggers the dip signal → policy buys real bad news at $0.40 → contract settles NO → <strong>−$0.399</strong></li>
-    <li><strong>Quantified across all four model cases</strong> (A/B × jumps on/off): edge stays significant but decays ~linearly in λ — <strong>−24%</strong> at one event per 20 periods, <strong>−62%</strong> at one per 5 — and under A+jumps the winner flips to <em>fast</em> smoothing: long memory becomes a stale anchor</li>
-  </ul>
-  <div class="notes"><h4>Speaker notes</h4><p>This is the "we know our model's boundary" slide. The seed-42 story is reproducible live in the demo if asked — toggle news jumps in the sidebar.</p></div>
-</section>
-
-<!-- 16 ─ Demo -->
+<!-- 17 ─ Demo -->
 <section class="slide" style="align-items:center; text-align:center">
   <div class="kicker">Live demo</div>
   <h2 style="font-size:clamp(30px,4.5vw,58px)">Let's break the market together</h2>
@@ -378,15 +405,16 @@
   <div class="notes"><h4>Speaker notes</h4><p>Demo script (~5 min): 1) Resimulate a few paths — point out the hidden truth. 2) Policy Lab: drag δ from 0.05 to 0.15, watch significance verdict flip. 3) Paste a Polymarket URL, prefill, rerun. 4) Toggle news jumps, resimulate until a jump path shows the dip-buying trap. Fallback: bundled samples if venue Wi-Fi dies.</p></div>
 </section>
 
-<!-- 17 ─ Conclusions -->
+<!-- 18 ─ Conclusions -->
 <section class="slide">
   <div class="kicker">Conclusions</div>
   <h2>Count the <span class="hl">noise</span>, not the stickiness</h2>
   <ul>
     <li>A naive EMA dip-buying rule beats buy-and-hold by <strong>+$0.10 per $1 contract</strong> at the baseline — CI-significant across the entire persistence range, surviving 2¢ costs</li>
     <li>The expected "persistence threshold" doesn't exist; instead the edge peaks at moderate κ and is <strong>created by observation noise</strong> — vanishing exactly at σ<sub>p</sub> = 0</li>
+    <li>News erodes the edge linearly and kills it at a <strong>mapped frontier</strong> — (λ=0.2, σ<sub>J</sub>=0.6) flips the sign: dips become information</li>
     <li>Trust chain: 37 tests · adversarial review · common random numbers · one master seed</li>
-    <li><strong>Future:</strong> jump-intensity sweep to find where dip-buying breaks · exit rules &amp; position sizing · bid-ask spreads and price impact · correlated multi-market portfolios</li>
+    <li><strong>Future:</strong> place real markets on the frontier map (estimate λ, σ<sub>J</sub> from outsized moves) · exit rules &amp; position sizing · bid-ask spreads and price impact · correlated multi-market portfolios</li>
   </ul>
   <p style="margin-top:3vh"><strong>The takeaway we'd offer:</strong> the best output of a simulation study is the mechanism it forces you to articulate. We asked "how much persistence does a trader need?" — the model answered "wrong question."</p>
   <p class="note-hint">github.com/larionovaa2248-glitch/stochastic-project · Thank you — questions!</p>

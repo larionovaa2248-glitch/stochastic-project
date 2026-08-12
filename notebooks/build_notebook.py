@@ -195,6 +195,30 @@ cells.append(md(
 ))
 
 cells.append(md(
+    "### The news frontier: where dip-buying dies\n"
+    "Sweeping news rate λ and jump size σ_J jointly locates the zero "
+    "crossing — the boundary where a dip becomes more likely news than noise."
+))
+
+cells.append(code(
+    "fr = tables['jump_frontier']\n"
+    "pivot_fr = fr.pivot(index='jump_scale', columns='jump_rate', values='diff_vs_bh')\n"
+    "sig_fr = fr.pivot(index='jump_scale', columns='jump_rate', values='any_ema_beats_bh')\n"
+    "print('best EMA edge over BH (per contract):')\n"
+    "display(pivot_fr.round(3))\n"
+    "print('cells where some EMA cell still beats BH:')\n"
+    "display(sig_fr)"
+))
+
+cells.append(md(
+    "**The crossing is real:** at (λ = 0.20, σ_J = 0.60) the best cell's "
+    "paired edge is **−0.0066**, CI [−0.0089, −0.0044] — dip-buying "
+    "significantly *loses* to buy-and-hold and no grid cell is "
+    "significant-positive. On the way to the frontier the winning threshold "
+    "retreats from δ = 0.10 to δ = 0.02: big dips become information."
+))
+
+cells.append(md(
     "## 8. Real-data calibration (scope: inputs only)\n"
     "Bundled Polymarket samples and their implied model parameters — evidence "
     "that the simulator defaults (σ_q ≈ 0.02 per step) are realistic. We do "

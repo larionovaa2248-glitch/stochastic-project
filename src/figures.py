@@ -378,11 +378,43 @@ def fig_jump_sweep(sweep: pd.DataFrame) -> go.Figure:
     return fig
 
 
+def fig_jump_frontier(frontier: pd.DataFrame) -> go.Figure:
+    """(lambda, jump size) heatmap of the best EMA edge — the news frontier."""
+    rates = sorted(frontier["jump_rate"].unique())
+    scales = sorted(frontier["jump_scale"].unique())
+    M = np.full((len(scales), len(rates)), np.nan)
+    sig = np.zeros_like(M, dtype=bool)
+    for _, r in frontier.iterrows():
+        i, j = scales.index(r["jump_scale"]), rates.index(r["jump_rate"])
+        M[i, j] = r["diff_vs_bh"]
+        sig[i, j] = bool(r["any_ema_beats_bh"])
+    lim = float(np.nanmax(np.abs(M))) or 1.0
+    fig = go.Figure(layout=_base_layout(
+        "The news frontier: best EMA edge vs (lambda, jump size) — X = no cell beats BH",
+        "lambda (news events per period)", "jump size (std, before damping)",
+    ))
+    fig.add_heatmap(z=M, x=[str(r) for r in rates], y=[str(s) for s in scales],
+                    colorscale=DIVERGING, zmin=-lim, zmax=lim,
+                    colorbar=dict(title="edge"),
+                    texttemplate="%{z:.3f}", textfont=dict(color=INK), xgap=2, ygap=2)
+    xs = [str(rates[j]) for i in range(len(scales)) for j in range(len(rates)) if not sig[i, j]]
+    ys = [str(scales[i]) for i in range(len(scales)) for j in range(len(rates)) if not sig[i, j]]
+    if xs:
+        fig.add_scatter(x=xs, y=ys, mode="markers", showlegend=False,
+                        marker=dict(symbol="x-thin", size=18, color=INK,
+                                    line=dict(color=INK, width=2)))
+    fig.update_xaxes(type="category")
+    fig.update_yaxes(type="category")
+    return fig
+
+
 def generate_extension(tables: dict[str, pd.DataFrame]) -> None:
     """Export the extension figures (news jumps, A-vs-B illustration)."""
     _save(fig_variant_ab(), "fig_variant_ab.png")
     _save(fig_jump_story(), "fig_jump_path.png")
     _save(fig_jump_sweep(tables["sweep_jump_rate"]), "fig_jump_sweep.png")
+    _save(fig_jump_frontier(tables["jump_frontier"]), "fig_jump_frontier.png",
+          width=800, height=520)
 
 
 def generate_all(tables: dict[str, pd.DataFrame]) -> None:

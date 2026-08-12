@@ -1,6 +1,6 @@
 # Presentation Slides
 
-A self-contained HTML slide deck (17 slides, ~20 minutes including the live
+A self-contained HTML slide deck (18 slides, ~20 minutes including the live
 demo). No build step, no dependencies — `index.html` plus the figure PNGs in
 `assets/`.
 
@@ -29,7 +29,7 @@ npm install docx && node slides/build_speaker_script.js
 
 ## The live-demo slide
 
-Slide 16 links to the dashboard at `http://localhost:8601`. Before
+Slide 17 links to the dashboard at `http://localhost:8601`. Before
 presenting, start it:
 
 ```bash
