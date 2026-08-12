@@ -83,9 +83,12 @@
     font-size: 12px; margin-bottom: 1vh; }
   .notes p { font-size: clamp(13px, 1.4vw, 17px); }
   @media print {
-    html, body { overflow: visible; background: #fff; }
-    .slide { position: relative; display: flex !important; page-break-after: always;
-      min-height: 100vh; }
+    @page { size: 13.333in 7.5in; margin: 0; }
+    html, body { overflow: visible; background: var(--bg) !important;
+      -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .slide { position: relative; display: flex !important; height: 7.5in;
+      overflow: hidden; background: var(--bg); break-after: page; }
+    .slide:last-child { break-after: auto; }
     .hud, .bar, .notes { display: none !important; }
   }
 </style>
