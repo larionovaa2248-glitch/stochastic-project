@@ -400,9 +400,10 @@
   <div class="kicker">Live demo</div>
   <h2 style="font-size:clamp(30px,4.5vw,58px)">Let's break the market together</h2>
   <p>Single Path Explorer → Policy Lab verdict flips as δ moves → load a real market → news jumps on</p>
-  <a class="demo-btn" href="http://localhost:8601" target="_blank" rel="noopener">Open the dashboard →</a>
-  <p class="note-hint">Requires the local server:&nbsp; <code>streamlit run dashboard/app.py</code>
-    &nbsp;·&nbsp; fully offline-capable (bundled sample markets)</p>
+  <a class="demo-btn" id="demo-btn" href="http://localhost:8601" target="_blank" rel="noopener">Open the dashboard →</a>
+  <p class="note-hint">Presenting via <code>python slides/present.py</code>? This button boots the
+    dashboard automatically. Otherwise start it first:&nbsp;
+    <code>streamlit run dashboard/app.py</code> &nbsp;·&nbsp; fully offline-capable</p>
   <div class="notes"><h4>Speaker notes</h4><p>Demo script (~5 min): 1) Resimulate a few paths — point out the hidden truth. 2) Policy Lab: drag δ from 0.05 to 0.15, watch significance verdict flip. 3) Paste a Polymarket URL, prefill, rerun. 4) Toggle news jumps, resimulate until a jump path shows the dip-buying trap. Fallback: bundled samples if venue Wi-Fi dies.</p></div>
 </section>
 
@@ -465,6 +466,41 @@
   }
   addEventListener("hashchange", () => { if (fromHash() !== i) show(fromHash()); });
   show(fromHash());
+
+  // Demo button: when served by slides/present.py, boot the dashboard on
+  // demand and open it once it answers; on static hosting or file://, the
+  // API calls fail and we fall back to plainly opening the link.
+  const demoBtn = document.getElementById("demo-btn");
+  if (demoBtn) {
+    const DASH = demoBtn.href;
+    const label = demoBtn.textContent;
+    let busy = false;
+    const status = async () =>
+      (await fetch("/api/dashboard/status", { cache: "no-store" })).json();
+    demoBtn.addEventListener("click", async (e) => {
+      e.preventDefault();
+      if (busy) return;
+      busy = true;
+      try {
+        let st = await status();
+        if (!st.running) {
+          demoBtn.textContent = "Starting the dashboard… (first boot ~10 s)";
+          await fetch("/api/dashboard/start", { cache: "no-store" });
+          const t0 = Date.now();
+          while (Date.now() - t0 < 45000) {
+            await new Promise((r) => setTimeout(r, 700));
+            st = await status();
+            if (st.running) break;
+          }
+        }
+        demoBtn.textContent = st.running ? "Dashboard is up — opening ↗" : label;
+      } catch {
+        /* no presentation server: just open the link as before */
+      }
+      window.open(DASH, "_blank", "noopener");
+      setTimeout(() => { demoBtn.textContent = label; busy = false; }, 2500);
+    });
+  }
 })();
 </script>
 </body>

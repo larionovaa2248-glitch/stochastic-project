@@ -4,13 +4,22 @@ A self-contained HTML slide deck (18 slides, ~20 minutes including the live
 demo). No build step, no dependencies — `index.html` plus the figure PNGs in
 `assets/`.
 
-## Present locally
-
-Open `slides/index.html` in any browser (double-click works), or serve it:
+## Present locally (recommended)
 
 ```bash
-python3 -m http.server 8700 --directory slides
+python3 slides/present.py
 ```
+
+This serves the deck at http://localhost:8700, opens it in your browser, and
+— the important part — makes the demo slide's **"Open the dashboard" button
+start Streamlit automatically**: click it and the button shows "Starting the
+dashboard…", boots `dashboard/app.py` on port 8601, waits until it answers,
+and opens it. No separate terminal needed. (Stopping `present.py` leaves a
+started dashboard running.)
+
+Alternatively, open `slides/index.html` directly or serve it with any static
+server — everything works except the auto-start: then launch the dashboard
+yourself first (`streamlit run dashboard/app.py`).
 
 Controls: **←/→** (or space / click) to navigate · **N** toggles speaker
 notes · **Home/End** jump · URL hash (`#/12`) deep-links a slide · print to
@@ -29,15 +38,17 @@ npm install docx && node slides/build_speaker_script.js
 
 ## The live-demo slide
 
-Slide 17 links to the dashboard at `http://localhost:8601`. Before
-presenting, start it:
+Slide 17's button opens the dashboard at `http://localhost:8601`. When the
+deck is served by `present.py` the button starts it for you; otherwise start
+it before presenting:
 
 ```bash
 streamlit run dashboard/app.py --server.port 8601
 ```
 
-The dashboard is fully offline-capable (bundled sample markets), so the demo
-works without venue Wi-Fi.
+Tip: click the button once ~a minute before the demo so the first boot and
+cache warm-up happen off-stage. The dashboard is fully offline-capable
+(bundled sample markets), so the demo works without venue Wi-Fi.
 
 ## Deploying to Vercel (when ready)
 
