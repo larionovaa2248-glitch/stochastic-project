@@ -184,7 +184,8 @@
   <div class="formula">A (iid noise):&nbsp;&nbsp;p<sub>t</sub> = clip( q<sub>t</sub> + η<sub>t</sub> )&nbsp;&nbsp;&nbsp;<span class="c">η<sub>t</sub> ~ N(0, σ<sub>p</sub>²)</span></div>
   <div class="formula">B (partial adj.):&nbsp;&nbsp;p<sub>t</sub> = clip( p<sub>t−1</sub> + κ(q<sub>t</sub> − p<sub>t−1</sub>) + η<sub>t</sub> )</div>
   <ul>
-    <li>Variant A: an error is <strong>born and dies within one period</strong>. Variant B: the gap to truth closes at rate κ, so a shock decays geometrically — a cheap contract <strong>stays cheap for ~1/κ periods</strong>.</li>
+    <li>Variant A: an error is <strong>born and dies within one period</strong> — the market re-prices from scratch every step.</li>
+    <li>Variant B: the gap to truth closes at rate κ, so a shock decays geometrically — a cheap contract <strong>stays cheap for ~1/κ periods</strong>.</li>
     <li>κ = 1 collapses B into A <strong>exactly</strong>, path-for-path (enforced by a test) — so κ is a continuous dial from "instant repricing" to "very sticky".</li>
     <li>σ<sub>p</sub> sets how <em>much</em> error; κ sets how <em>long</em> it lives.</li>
   </ul>
