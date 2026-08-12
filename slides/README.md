@@ -1,6 +1,6 @@
 # Presentation Slides
 
-A self-contained HTML slide deck (18 slides, ~20 minutes including the live
+A self-contained HTML slide deck (19 slides, ~20 minutes including the live
 demo). No build step, no dependencies — `index.html` plus the figure PNGs in
 `assets/`.
 
@@ -38,7 +38,7 @@ npm install docx && node slides/build_speaker_script.js
 
 ## The live-demo slide
 
-Slide 17's button opens the dashboard at `http://localhost:8601`. When the
+Slide 18's button opens the dashboard at `http://localhost:8601`. When the
 deck is served by `present.py` the button starts it for you; otherwise start
 it before presenting:
 

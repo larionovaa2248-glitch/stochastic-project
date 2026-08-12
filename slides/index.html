@@ -148,23 +148,31 @@
 <section class="slide">
   <div class="kicker">The model · professor-approved structure</div>
   <h2>Three layers, simulated in order each period</h2>
-  <div class="cols cols-31">
-    <div>
-      <div class="formula orange">1 · Hidden truth&nbsp;&nbsp;<span class="c">q_t — a bounded random walk the trader NEVER sees</span></div>
-      <div class="formula">2 · Observed price&nbsp;&nbsp;<span class="c">p_t = truth + noise (two variants)</span></div>
-      <div class="formula aqua">3 · Settlement&nbsp;&nbsp;<span class="c">pays $1 with prob q_T, else $0</span></div>
-      <p>Profit per unit = payout − entry price − cost. A policy can profit
-        <strong>only by buying below true value</strong>.</p>
-    </div>
-    <div>
-      <div class="fig"><img src="assets/fig_single_path.png" alt="One simulated contract"></div>
-      <div class="figcap">One contract: dashed = hidden truth, blue = price, green = EMA, ▲ = buy</div>
-    </div>
-  </div>
-  <div class="notes"><h4>Speaker notes</h4><p>Walk the figure: price rattles around slow truth; EMA smooths; policy bought the dip; star = settlement. Emphasize the trader's information set is only the blue line.</p></div>
+  <div class="formula orange">1 · Hidden truth&nbsp;&nbsp;<span class="c">q_t — a bounded random walk the trader NEVER sees</span></div>
+  <div class="formula">2 · Observed price&nbsp;&nbsp;<span class="c">p_t = truth + noise (two variants)</span></div>
+  <div class="formula aqua">3 · Settlement&nbsp;&nbsp;<span class="c">pays $1 with probability q_T, else $0</span></div>
+  <p style="margin-top:1.5vh">Profit per unit = payout − entry price − cost. Settlement is graded against
+    the <strong>hidden truth</strong>, so a policy can profit
+    <strong>only by buying below true value</strong> — never by predicting the noise itself.</p>
+  <div class="notes"><h4>Speaker notes</h4><p>Read the three boxes top to bottom — this is the whole architecture. Land the last line hard: settlement against the truth is what makes the design honest. The next slide SHOWS it.</p></div>
 </section>
 
-<!-- 5 ─ Layer 1 -->
+<!-- 5 ─ The model, one picture -->
+<section class="slide" style="justify-content:center">
+  <div class="kicker">The model · one contract, period by period</div>
+  <div class="fig" style="align-self:center; max-width:88%">
+    <img src="assets/fig_single_path.png" alt="One simulated contract: hidden truth, observed price, EMA, buy marker, settlement"
+         style="max-height:66vh; width:auto; max-width:100%; margin:0 auto; display:block">
+  </div>
+  <div class="figcap" style="font-size:clamp(13px,1.5vw,18px)">
+    <span style="color:var(--orange)">dashed = hidden truth q_t</span> ·
+    <span style="color:var(--blue)">blue = observed price p_t</span> ·
+    <span style="color:var(--aqua)">green = EMA estimate f_t</span> ·
+    ▲ = the policy buys · ★ = settlement</div>
+  <div class="notes"><h4>Speaker notes</h4><p>Walk it slowly — this picture carries the whole talk. The price rattles around the slow-moving truth; the EMA smooths the rattle; the triangle is the dip-buy at ~$0.30; the star shows it settled YES for +$0.70. Emphasize: the trader's entire information set is the blue line. Per-path outcomes are all-or-nothing — which is why every number later is an average over 20,000 of these.</p></div>
+</section>
+
+<!-- 6 ─ Layer 1 -->
 <section class="slide">
   <div class="kicker">Layer 1 · the hidden truth</div>
   <h2>A martingale that <span class="hl">stays a probability</span></h2>
@@ -177,7 +185,7 @@
   <div class="notes"><h4>Speaker notes</h4><p>The martingale property is doing double duty: it's economically sensible AND it's the basis of two validation tests (mean q_T = q0; settlement frequency = q0).</p></div>
 </section>
 
-<!-- 6 ─ Layer 2 -->
+<!-- 7 ─ Layer 2 -->
 <section class="slide">
   <div class="kicker">Layer 2 · the observed price</div>
   <h2>One dial for market efficiency: <span class="hl">κ</span></h2>
@@ -192,7 +200,7 @@
   <div class="notes"><h4>Speaker notes</h4><p>These two dials — noise size and noise lifetime — are the axes of the whole study. Keep them separate in the audience's head now; the punchline depends on it.</p></div>
 </section>
 
-<!-- 7 ─ Policies -->
+<!-- 8 ─ Policies -->
 <section class="slide">
   <div class="kicker">The trading policies</div>
   <h2>Smooth the price, <span class="hl">buy the dip</span>, hold to settlement</h2>
@@ -211,7 +219,7 @@
   <div class="notes"><h4>Speaker notes</h4><p>Stress that policies are deliberately mechanical — no learning, no optimization on the fly. The question is whether even a naive rule finds the noise.</p></div>
 </section>
 
-<!-- 8 ─ Validation -->
+<!-- 9 ─ Validation -->
 <section class="slide">
   <div class="kicker">Why trust the numbers · 30% of the rubric</div>
   <h2><span class="hl">37 tests</span> gate every change</h2>
@@ -226,7 +234,7 @@
   <div class="notes"><h4>Speaker notes</h4><p>The bug story is a feature, not an embarrassment: it shows the review process worked and the surviving test has actual detection power. PROJECT.md calls lookahead "the one bug that would invalidate the whole analysis."</p></div>
 </section>
 
-<!-- 9 ─ Experiment design -->
+<!-- 10 ─ Experiment design -->
 <section class="slide">
   <div class="kicker">Experiment design</div>
   <h2>Every claim carries a <span class="hl">95% CI</span></h2>
@@ -245,7 +253,7 @@
   <div class="notes"><h4>Speaker notes</h4><p>CRN is the technical flex: paired differences cut comparison variance ~10x, which is why our "beats BH" CIs are so tight (±0.0015 vs ±0.007 marginal).</p></div>
 </section>
 
-<!-- 10 ─ Baseline results -->
+<!-- 11 ─ Baseline results -->
 <section class="slide">
   <div class="kicker">Results · baseline market (kappa 0.3 · noise 0.05)</div>
   <h2>Eight of nine cells <span class="hl">beat buy-and-hold</span></h2>
@@ -270,7 +278,7 @@
   <div class="notes"><h4>Speaker notes</h4><p>Note buy-and-hold ≈ 0 by construction (martingale + mean-zero noise at entry). Also note the corner cell (0.6, 0.10) almost never trades — the two dials interact.</p></div>
 </section>
 
-<!-- 11 ─ Headline -->
+<!-- 12 ─ Headline -->
 <section class="slide">
   <div class="kicker">Headline experiment</div>
   <h2>How much persistence does the edge need? <span class="hl">None.</span></h2>
@@ -291,7 +299,7 @@
   <div class="notes"><h4>Speaker notes</h4><p>We expected a threshold ("κ below which it works"). The model said: wrong intuition. Explain both flanks of the peak. Costs barely matter because both strategies trade ≤ once.</p></div>
 </section>
 
-<!-- 12 ─ The twist -->
+<!-- 13 ─ The twist -->
 <section class="slide">
   <div class="kicker">The deeper finding</div>
   <h2><span class="hl">Noise creates the edge.</span> Persistence only shapes it.</h2>
@@ -317,7 +325,7 @@
   <div class="notes"><h4>Speaker notes</h4><p>This is the thesis slide. It also tells us where the result must break: when dips can be NEWS. Segue to the extension.</p></div>
 </section>
 
-<!-- 13 ─ Jump model -->
+<!-- 14 ─ Jump model -->
 <section class="slide">
   <div class="kicker">Extension · the stress test slide 12 demands · default OFF</div>
   <h2>Add news: <span class="hl">Poisson arrivals</span> in the hidden truth</h2>
@@ -337,7 +345,7 @@
   <div class="notes"><h4>Speaker notes</h4><p>This is the falsification test of slide 12, not decoration. Walk the formula: same diffusion plus a Bernoulli-gated jump term. Stress the three math facts fast, then tell the seed-42 story on the figure.</p></div>
 </section>
 
-<!-- 14 ─ News results -->
+<!-- 15 ─ News results -->
 <section class="slide">
   <div class="kicker">Extension · quantified · all four model cases</div>
   <h2>News erodes the edge — and we <span class="hl">mapped where it dies</span></h2>
@@ -358,7 +366,7 @@
   <div class="notes"><h4>Speaker notes</h4><p>Read the heatmap corner to corner: bottom-left ≈ the approved model, top-right = news-dominated. The δ retreat is the subtlest point — say it slowly. This completes the thesis: the edge equals the noise share of the error budget, and we can now say where the sign flips.</p></div>
 </section>
 
-<!-- 15 ─ Risk -->
+<!-- 16 ─ Risk -->
 <section class="slide">
   <div class="kicker">Risk profile</div>
   <h2>The rule doesn't lose <span class="hl">less often</span> — it loses <span class="hl">less</span></h2>
@@ -376,7 +384,7 @@
   <div class="notes"><h4>Speaker notes</h4><p>Good place for the "expected value isn't the whole story" caveat — a real trader cares about the distribution, and settlement risk dominates path risk here.</p></div>
 </section>
 
-<!-- 16 ─ Real data -->
+<!-- 17 ─ Real data -->
 <section class="slide">
   <div class="kicker">Grounding in reality</div>
   <h2>Real Polymarket data <span class="hl">sets the inputs</span> — nothing more</h2>
@@ -395,7 +403,7 @@
   <div class="notes"><h4>Speaker notes</h4><p>Anticipate the obvious question ("so can I make money on Polymarket?") with the scope guard. The model assumes all mispricing is noise; reality mixes noise with news.</p></div>
 </section>
 
-<!-- 17 ─ Demo -->
+<!-- 18 ─ Demo -->
 <section class="slide" style="align-items:center; text-align:center">
   <div class="kicker">Live demo</div>
   <h2 style="font-size:clamp(30px,4.5vw,58px)">Let's break the market together</h2>
@@ -407,7 +415,7 @@
   <div class="notes"><h4>Speaker notes</h4><p>Demo script (~5 min): 1) Resimulate a few paths — point out the hidden truth. 2) Policy Lab: drag δ from 0.05 to 0.15, watch significance verdict flip. 3) Paste a Polymarket URL, prefill, rerun. 4) Toggle news jumps, resimulate until a jump path shows the dip-buying trap. Fallback: bundled samples if venue Wi-Fi dies.</p></div>
 </section>
 
-<!-- 18 ─ Conclusions -->
+<!-- 19 ─ Conclusions -->
 <section class="slide">
   <div class="kicker">Conclusions</div>
   <h2>Count the <span class="hl">noise</span>, not the stickiness</h2>
@@ -481,6 +489,24 @@
       e.preventDefault();
       if (busy) return;
       busy = true;
+      // Open the NEW TAB synchronously, inside the click gesture — popup
+      // blockers kill window.open after an await, never during the click.
+      // The tab shows a holding screen until the dashboard answers.
+      const tab = window.open("", "_blank");
+      if (tab) {
+        tab.opener = null;
+        tab.document.write(
+          '<body style="margin:0;display:grid;place-items:center;height:100vh;' +
+          'background:#12120f;color:#f5f4ef;font-family:system-ui,sans-serif">' +
+          '<div style="text-align:center"><div style="font-size:44px">🎲</div>' +
+          '<h1 style="font-weight:650">Starting the dashboard…</h1>' +
+          '<p style="color:#898781">first boot takes ~10 seconds</p></div></body>');
+        tab.document.title = "Starting dashboard…";
+      }
+      const go = () => {
+        if (tab && !tab.closed) { tab.location.replace(DASH); tab.focus?.(); }
+        else { window.open(DASH, "_blank"); }
+      };
       try {
         let st = await status();
         if (!st.running) {
@@ -495,9 +521,9 @@
         }
         demoBtn.textContent = st.running ? "Dashboard is up — opening ↗" : label;
       } catch {
-        /* no presentation server: just open the link as before */
+        /* no presentation server (file:// or static hosting): open directly */
       }
-      window.open(DASH, "_blank", "noopener");
+      go();
       setTimeout(() => { demoBtn.textContent = label; busy = false; }, 2500);
     });
   }
