@@ -1,0 +1,7 @@
+# Streamlit configuration (used locally and by Streamlit Community Cloud).
+# Light theme so the dashboard matches the report/slide figure styling.
+[theme]
+base = "light"
+
+[browser]
+gatherUsageStats = false
