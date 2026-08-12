@@ -47,7 +47,7 @@ children.push(P("Text in plain type below is meant to be spoken, roughly verbati
 
 // ---- Slide 1 ----
 children.push(SLIDE(1, "Title", "40 sec"));
-children.push(P("Hi everyone. We're [NAMES]. Our project is called Trading Against Noise — it's a simulation study of trading strategies in prediction markets, the Polymarket and Kalshi style markets where you bet on yes-or-no questions."));
+children.push(P("Hi everyone. We're Anastasia, Qian, Chenhao, and Haoyu. Our project is called Trading Against Noise — it's a simulation study of trading strategies in prediction markets, the Polymarket and Kalshi style markets where you bet on yes-or-no questions."));
 children.push(P("Three numbers up front that describe the whole project: a three-layer stochastic model, thirty-seven automated validation tests behind every result, and twenty thousand simulated markets behind every number we'll show you. And one seed — every figure in this talk regenerates exactly from a single random seed, so everything you're about to see is fully reproducible."));
 
 // ---- Slide 2 ----

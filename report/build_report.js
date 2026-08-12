@@ -86,7 +86,7 @@ children.push(
   new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 240 }, children: [new TextRun({ text: "A Stochastic Simulation Study of Prediction-Market Trading Policies", bold: true, size: 34 })] }),
   new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 400 }, children: [new TextRun({ text: "SHBI-GB.7301 — Stochastic Modeling & Simulation", size: 26 })] }),
   new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "NYU Summer 2026 — Final Project Report", size: 26 })] }),
-  new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 400 }, children: [new TextRun({ text: "Team: Anastasia Larionova [add teammate names]", size: 24 })] }),
+  new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 400 }, children: [new TextRun({ text: "Anastasia Larionova · Qian Shen · Chenhao Xi · Haoyu Zheng", size: 24 })] }),
   new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "August 2026", size: 24, color: "52514E" })] }),
   new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 300 }, children: [new TextRun({ text: "Code, data, and interactive dashboard: github.com/larionovaa2248-glitch/stochastic-project", size: 20, color: "52514E" })] }),
   new Paragraph({ children: [new PageBreak()] }),

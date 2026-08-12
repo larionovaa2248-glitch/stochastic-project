@@ -506,7 +506,7 @@ trades, and CIs. The engine passes a 37-test validation suite (zero-noise
 limit, martingale property, settlement calibration, no-lookahead, seed
 reproducibility — Section 7).
 
-**Team:** _add team member names here before the presentation._
+**Team:** Anastasia Larionova · Qian Shen · Chenhao Xi · Haoyu Zheng
         """
     )
 
